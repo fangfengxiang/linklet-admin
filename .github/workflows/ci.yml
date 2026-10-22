@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # 生成 Umi 临时类型（src/.umi）——tsc 解析 @umijs/max 的 history/request 等导出依赖此目录
+      # 本地 dev/build 会生成，但 src/.umi 被 gitignore，远程 fresh checkout 需显式 setup
+      - name: Generate Umi temp types (max setup)
+        run: npx max setup
+
       - name: Lint (eslint + tsc)
         run: npm run lint
 
@@ -47,7 +52,7 @@ jobs:
           retention-days: 7
 
   vitest:
-    # Vitest + Testing Library 组件测试（jsdom/happy-dom 环境，快、无浏览器）
+    # Vitest + Testing Library 组件测试（happy-dom 环境，快、无浏览器）
     # vitest.config.ts include 同时覆盖 tests/** 和 src/** 纯单测，未来纯函数测试也走此 job
     name: Vitest (Component Tests)
     runs-on: ubuntu-22.04
@@ -62,6 +67,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # 同 build job：生成 src/.umi 供 vite 解析 @umijs/max 运行时导出
+      - name: Generate Umi temp types (max setup)
+        run: npx max setup
 
       - name: Run Vitest
         run: npm run test
