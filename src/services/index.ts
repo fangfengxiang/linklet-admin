@@ -4,6 +4,6 @@ export { shortLink } from './shortLink';
 export { tenant } from './tenant';
 export { credential } from './credential';
 export { domainEntry } from './domainEntry';
-export { scene } from './scene';
-export { sceneConfig } from './sceneConfig';
+export { group } from './group';
+export { groupConfig } from './groupConfig';
 export * from './typings';

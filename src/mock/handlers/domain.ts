@@ -1,4 +1,4 @@
-// DomainEntry 处理器 —— 状态 new→deployed→offline 不可逆；有 Scene 绑定不可下线
+// DomainEntry 处理器 —— 状态 new→deployed→offline 不可逆；有 Group 绑定不可下线
 import { db, ok, fail, nextId, fields, type Handler } from '../store';
 
 const handlers: Record<string, Handler> = {
@@ -32,8 +32,8 @@ const handlers: Record<string, Handler> = {
     const row = db.domains.find((d) => d.id === id);
     if (!row) return fail(409, 'resource missing or state conflict');
     if (row.status !== 2) return fail(409, 'domain must be deployed to offline');
-    const bound = db.scenes.some((s) => s.domain_entry_id === id && s.status === 1);
-    if (bound) return fail(409, 'domain is still bound to active scenes');
+    const bound = db.groups.some((g) => g.domain_entry_id === id && g.status === 1);
+    if (bound) return fail(409, 'domain is still bound to active groups');
     row.status = 3;
     row.disabled_at = new Date().toISOString();
     return ok(row);

@@ -8,10 +8,18 @@ const LINKLET_BACKEND = process.env.LINKLET_BACKEND || 'http://127.0.0.1:8080';
 // 是否启用 Mock（开发期默认 Mock，连接真实后端时设 MOCK=0）
 const USE_MOCK = process.env.MOCK !== '0';
 
-// 部署基路径：GitHub Pages 项目站点位于 /linklet-admin/ 子路径，本地开发为根 /
-// Deploy base path: gh-pages project site under /linklet-admin/ subpath; local dev at root
+// 部署基路径：
+// - DEPLOY_BASE=gh-pages → /linklet-admin/（GitHub Pages 项目站点快捷值）
+// - DEPLOY_BASE=/admin 或 admin → /admin/（通用子路径，自动补首尾斜杠）
+// - 不设 → /（根部署，默认）
+// Deploy base path: gh-pages shortcut → /linklet-admin/; arbitrary subpath auto-normalized; root by default
 const DEPLOY_BASE = process.env.DEPLOY_BASE;
-const BASE_PATH = DEPLOY_BASE === 'gh-pages' ? '/linklet-admin/' : '/';
+const BASE_PATH = (() => {
+  if (!DEPLOY_BASE) return '/';
+  if (DEPLOY_BASE === 'gh-pages') return '/linklet-admin/';
+  const p = DEPLOY_BASE.startsWith('/') ? DEPLOY_BASE : `/${DEPLOY_BASE}`;
+  return p.endsWith('/') ? p : `${p}/`;
+})();
 
 export default defineConfig({
   publicPath: BASE_PATH,
@@ -34,7 +42,8 @@ export default defineConfig({
     '/api': {
       target: LINKLET_BACKEND,
       changeOrigin: true,
-      // BFF 签名中间件：在 proxy bypass/headers 阶段注入 AK/SK 签名
+      // dev BFF 代签：仅业务 API（/api/v1/shorten/*）需 AK/SK 签名；
+      // admin API（/api/v1/admin/*）后端无鉴权中间件，生产 SPA 走 nginx IP 白名单。
       configure: (proxy) => {
         proxy.on('proxyReq', (proxyReq, req) => {
           signRequest(proxyReq, req);

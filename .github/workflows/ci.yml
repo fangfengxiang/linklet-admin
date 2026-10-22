@@ -1,6 +1,7 @@
 name: CI
 
-# push/PR: lint (eslint + tsc) + 生产构建（默认 + gh-pages 子路径）
+# push/PR: lint (eslint + tsc) + 生产构建 + Vitest 组件测试
+# E2E 测试见 e2e.yml（独立 workflow，需浏览器，较慢）
 # Adapted from the project's GitHub Actions conventions: checkout@v4, node cache, concurrency.
 on:
   push:
@@ -44,3 +45,23 @@ jobs:
           name: dist-gh-pages
           path: dist
           retention-days: 7
+
+  vitest:
+    # Vitest + Testing Library 组件测试（jsdom/happy-dom 环境，快、无浏览器）
+    # vitest.config.ts include 同时覆盖 tests/** 和 src/** 纯单测，未来纯函数测试也走此 job
+    name: Vitest (Component Tests)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest
+        run: npm run test

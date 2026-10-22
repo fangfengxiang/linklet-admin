@@ -2,8 +2,8 @@
 import shortLink from './shortLink';
 import tenant from './tenant';
 import domain from './domain';
-import scene from './scene';
-import sceneConfig from './sceneConfig';
+import group from './group';
+import groupConfig from './groupConfig';
 import credential from './credential';
 import type { Handler } from '../store';
 
@@ -13,7 +13,7 @@ export const routes: Record<string, Handler> = {
   ...shortLink,
   ...tenant,
   ...domain,
-  ...scene,
-  ...sceneConfig,
+  ...group,
+  ...groupConfig,
   ...credential,
 };

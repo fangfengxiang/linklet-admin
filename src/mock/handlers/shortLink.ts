@@ -8,13 +8,15 @@ const handlers: Record<string, Handler> = {
     return row ? ok(row) : fail(4006, 'link not found');
   },
   'POST /api/v1/shorten/create': (_q, body) => {
-    const { target_url, scene_id, expires_at } = fields(body);
+    const { target_url, group_id, expires_at } = fields(body);
     if (!target_url) return fail(4001, 'target_url is required');
-    if (!scene_id) return fail(4002, 'scene_id is required');
+    if (!group_id) return fail(4002, 'group_id is required');
+    const g = db.groups.find((x) => x.group_id === group_id);
+    if (!g) return fail(4003, 'group not found');
     const code = genCode();
     db.shortLinks.push({
       id: nextId(),
-      scene_id: scene_id as number,
+      group_id: group_id as number,
       code,
       dest_url: target_url as string,
       status: 1 as const,
@@ -24,17 +26,17 @@ const handlers: Record<string, Handler> = {
     return ok({ code });
   },
   'POST /api/v1/shorten/gen': (_q, body) => {
-    const { target_url, scene_id, expires_at } = fields(body);
+    const { target_url, group_id, expires_at } = fields(body);
     if (!target_url) return fail(4001, 'target_url is required');
-    if (!scene_id) return fail(4002, 'scene_id is required');
-    const sc = db.scenes.find((s) => s.scene_id === scene_id);
-    if (!sc) return fail(4003, 'scene not found');
-    const dom = db.domains.find((d) => d.id === sc.domain_entry_id);
-    if (!dom) return fail(4005, 'domain not configured for scene');
+    if (!group_id) return fail(4002, 'group_id is required');
+    const g = db.groups.find((x) => x.group_id === group_id);
+    if (!g) return fail(4003, 'group not found');
+    const dom = db.domains.find((d) => d.id === g.domain_entry_id);
+    if (!dom) return fail(4005, 'domain not configured for group');
     const code = genCode();
     db.shortLinks.push({
       id: nextId(),
-      scene_id: scene_id as number,
+      group_id: group_id as number,
       code,
       dest_url: target_url as string,
       status: 1 as const,

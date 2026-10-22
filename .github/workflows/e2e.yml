@@ -1,0 +1,48 @@
+name: E2E Tests
+
+# 独立于 ci.yml（lint+build）：E2E 需起 dev server + 浏览器，较慢，独立并行不阻塞代码检查。
+# 触发与 ci.yml 对齐：push main/master/feature-* 与 PR。
+on:
+  push:
+    branches: [main, master, feature-*]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: e2e-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E (tester-army/e2e)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # e2e 要求 Node 22.22.3+ 或 24.8+（ci.yml 的 Node 20 不满足）
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers (chromium + system deps)
+        run: npx @e2e-dev/web install chromium --with-deps
+
+      - name: Run E2E tests
+        # npm run test:e2e = e2e run --exclude-tag agent
+        # CI 环境变量自动设置：config 的 app.command 拉起 dev server（默认 Mock 模式，无需后端）
+        # e2e 默认在 CI 下：retries=1、workers=1、cache=read-only
+        run: npm run test:e2e
+
+      - name: Upload E2E results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: .e2e/results
+          retention-days: 7

@@ -1,12 +1,12 @@
 // 仪表盘 —— 资源概览（接入实时计数）
 import { Card, Col, Row, Statistic, message } from 'antd';
 import { useEffect, useState } from 'react';
-import { scene, shortLink, domainEntry, tenant } from '@/services';
+import { group, shortLink, domainEntry, tenant } from '@/services';
 import { DomainError } from '@/services/typings';
 
 interface Counts {
   shortLink: number;
-  scene: number;
+  group: number;
   domain: number;
   tenant: number;
 }
@@ -14,7 +14,7 @@ interface Counts {
 export default function Dashboard() {
   const [counts, setCounts] = useState<Counts>({
     shortLink: 0,
-    scene: 0,
+    group: 0,
     domain: 0,
     tenant: 0,
   });
@@ -23,15 +23,15 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [links, scenes, domains, tenants] = await Promise.all([
+        const [links, groups, domains, tenants] = await Promise.all([
           shortLink.list(),
-          scene.list(),
+          group.list(),
           domainEntry.list(),
           tenant.list(),
         ]);
         setCounts({
           shortLink: links.length,
-          scene: scenes.length,
+          group: groups.length,
           domain: domains.length,
           tenant: tenants.length,
         });
@@ -52,7 +52,7 @@ export default function Dashboard() {
       </Col>
       <Col span={6}>
         <Card>
-          <Statistic title="场景数" value={counts.scene} loading={loading} />
+          <Statistic title="分组数" value={counts.group} loading={loading} />
         </Card>
       </Col>
       <Col span={6}>

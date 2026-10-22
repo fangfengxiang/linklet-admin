@@ -1,15 +1,17 @@
 // 短链管理 —— target_url/dest_url 不可改；code 不复用；停用不可逆；expires_at null=不过期
-import { ModalForm, ProForm, ProFormDateTimePicker, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro-components';
+// 注意：短链 CRUD 走业务 API（/api/v1/shorten/*），需租户 AK/SK 签名；
+// dev 由 BFF 代签，生产 SPA 需 BFF/nginx(OpenResty) 代签。后端无 admin list 端点。
+import { ModalForm, ProForm, ProFormDateTimePicker, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Drawer, message, Popconfirm, Space, Tag, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { scene, shortLink } from '@/services';
+import { group, shortLink } from '@/services';
 import { DomainError } from '@/services/typings';
 import { ActiveStatusTag } from '@/components/StatusTag';
 import type { ShortLink } from '@/services/typings';
 import { useRef, useState } from 'react';
 
 export default function ShortLinkPage() {
-  const tableRef = useRef<any>();
+  const tableRef = useRef<ActionType>();
   const refresh = () => tableRef.current?.reload();
   const [detail, setDetail] = useState<ShortLink | null>(null);
 
@@ -39,7 +41,7 @@ export default function ShortLinkPage() {
               try {
                 const res = await shortLink.create({
                   target_url: values.target_url,
-                  scene_id: values.scene_id,
+                  group_id: values.group_id,
                   expires_at: values.expires_at || null,
                 });
                 message.success(`创建成功，code: ${res.code}`);
@@ -61,7 +63,7 @@ export default function ShortLinkPage() {
               try {
                 const res = await shortLink.gen({
                   target_url: values.target_url,
-                  scene_id: values.scene_id,
+                  group_id: values.group_id,
                   expires_at: values.expires_at || null,
                 });
                 message.success(`生成成功，short_url: ${res.short_url}`);
@@ -90,7 +92,7 @@ export default function ShortLinkPage() {
         { title: 'ID', dataIndex: 'id', width: 60 },
         { title: 'Code', dataIndex: 'code' },
         { title: '目标URL', dataIndex: 'dest_url', ellipsis: true },
-        { title: '场景', dataIndex: 'scene_id' },
+        { title: '分组', dataIndex: 'group_id' },
         { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
         {
           title: '过期', dataIndex: 'expires_at', width: 100,
@@ -124,7 +126,7 @@ export default function ShortLinkPage() {
             <Field label="目标URL">
               <Typography.Paragraph copyable style={{ marginBottom: 0 }}>{detail.dest_url}</Typography.Paragraph>
             </Field>
-            <Field label="场景ID">{detail.scene_id}</Field>
+            <Field label="分组ID">{detail.group_id}</Field>
             <Field label="状态"><ActiveStatusTag status={detail.status} /></Field>
             <Field label="创建时间">{detail.created_at}</Field>
             <Field label="过期时间">{detail.expires_at ?? '永不过期'}</Field>
@@ -155,11 +157,11 @@ function ShortLinkForm() {
         rules={[{ required: true, max: 2048, type: 'url' }]}
       />
       <ProFormSelect
-        name="scene_id"
-        label="场景"
+        name="group_id"
+        label="分组"
         request={async () => {
-          const list = await scene.list();
-          return list.map((s) => ({ label: `${s.scene_id} ${s.name}`, value: s.scene_id }));
+          const list = await group.list();
+          return list.map((g) => ({ label: `${g.group_id} ${g.name}`, value: g.group_id }));
         }}
         rules={[{ required: true }]}
       />

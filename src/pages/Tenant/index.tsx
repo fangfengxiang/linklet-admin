@@ -1,15 +1,15 @@
-// 租户管理 —— scene_ids 授权集合（非所有权，去重）；停用阻止管理不影响解析
-import { ModalForm, ProFormSelect, ProFormText, ProTable } from '@ant-design/pro-components';
+// 租户管理 —— group_ids 授权集合（非所有权，去重）；停用阻止管理不影响解析
+import { ModalForm, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, message, Popconfirm, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { scene, tenant } from '@/services';
+import { group, tenant } from '@/services';
 import { DomainError } from '@/services/typings';
 import { ActiveStatusTag } from '@/components/StatusTag';
 import type { Tenant } from '@/services/typings';
 import { useRef, useState } from 'react';
 
 export default function TenantPage() {
-  const tableRef = useRef<any>();
+  const tableRef = useRef<ActionType>();
   const refresh = () => tableRef.current?.reload();
   const [granting, setGranting] = useState<Tenant | null>(null);
 
@@ -37,7 +37,7 @@ export default function TenantPage() {
           modalProps={{ destroyOnClose: true }}
           onFinish={async (values) => {
             try {
-              await tenant.create(values as any);
+              await tenant.create(values as { name: string });
               message.success('创建成功');
               refresh();
               return true;
@@ -63,9 +63,9 @@ export default function TenantPage() {
         { title: 'ID', dataIndex: 'id', width: 60 },
         { title: '名称', dataIndex: 'name' },
         {
-          title: '授权场景', dataIndex: 'scene_ids',
-          render: (_, r) => r.scene_ids?.length
-            ? <Space wrap>{r.scene_ids.map((id) => <Tag key={id}>{id}</Tag>)}</Space>
+          title: '授权分组', dataIndex: 'group_ids',
+          render: (_, r) => r.group_ids?.length
+            ? <Space wrap>{r.group_ids.map((id) => <Tag key={id}>{id}</Tag>)}</Space>
             : <span style={{ color: '#999' }}>无</span>,
         },
         { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
@@ -96,13 +96,13 @@ export default function TenantPage() {
       <ModalForm
         open={!!granting}
         onOpenChange={(open) => { if (!open) setGranting(null); }}
-        title="场景授权"
+        title="分组授权"
         modalProps={{ destroyOnClose: true }}
-        initialValues={granting ? { scene_ids: granting.scene_ids } : undefined}
+        initialValues={granting ? { group_ids: granting.group_ids } : undefined}
         onFinish={async (values) => {
           if (!granting) return false;
           try {
-            await tenant.grant(granting.id, values.scene_ids || []);
+            await tenant.grant(granting.id, values.group_ids || []);
             message.success('授权已更新');
             refresh();
             return true;
@@ -113,19 +113,19 @@ export default function TenantPage() {
         }}
       >
         <ProFormSelect
-          name="scene_ids"
-          label="授权场景"
+          name="group_ids"
+          label="授权分组"
           mode="multiple"
           request={async () => {
-            const list = await scene.list();
-            return list.map((s) => ({ label: `${s.scene_id} ${s.name}`, value: s.scene_id }));
+            const list = await group.list();
+            return list.map((g) => ({ label: `${g.group_id} ${g.name}`, value: g.group_id }));
           }}
           rules={[{ required: true }]}
         />
         <Alert
           type="info"
           showIcon
-          message="同一场景可授权给多个租户共同管理其下短链；授权撤销不影响历史短链解析。"
+          message="同一分组可授权给多个租户共同管理其下短链；授权撤销不影响历史短链解析。"
           style={{ marginBottom: 16 }}
         />
       </ModalForm>

@@ -1,0 +1,93 @@
+# linklet-admin nginx 配置示例
+#
+# 两种部署模式，按注释切换：
+#   - Mock 模式：纯静态，无 /api 反代（in-app mock 生成数据）
+#   - 真实后端模式：反代 /api 到后端（admin API 无鉴权，靠 IP 白名单防护）
+#
+# 用法：npm run build → 拷贝 dist/ 到 root 目录 → nginx -s reload
+
+server {
+  listen 80;
+  # listen 443 ssl http2;          # 生产建议 HTTPS
+  # ssl_certificate     /path/to/cert.pem;
+  # ssl_certificate_key /path/to/key.pem;
+  server_name admin.your.domain;
+
+  root /var/www/linklet-admin;     # npm run build 产物（dist/ 内容）
+  index index.html;
+
+  # === 鉴权：内部站 IP 白名单（可选，覆盖 SPA + 静态 + API）===
+  # allow 10.0.0.0/8;
+  # allow 192.168.0.0/16;
+  # deny all;
+
+  # SPA history 路由回退
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # === 真实后端模式：反代 /api 到后端（同源，无 CORS 问题）===
+  # Mock 模式下注释掉此段，前端走 in-app mock。
+  # admin API（/api/v1/admin/*）无鉴权中间件，靠上面的 IP 白名单防护。
+  # 业务 API（/api/v1/shorten/*）需租户 AK/SK 签名，管理控制台不持有 SK，故 ShortLink 页面保留 Mock。
+  location /api/ {
+    proxy_pass http://127.0.0.1:8080;   # linklet 后端
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  # 静态资源长缓存（hash 文件名，安全缓存）
+  location ~* \.(?:js|css|woff2?|png|jpe?g|svg)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    access_log off;
+  }
+
+  # gzip
+  gzip on;
+  gzip_min_length 1024;
+  gzip_types text/css application/javascript application/json image/svg+xml;
+}
+
+# ============================================================
+# 子路径部署示例：站点位于 https://admin.your.domain/admin/
+# Subpath deploy: site served under /admin/ subpath
+# ============================================================
+# 配套前端构建（.umirc.ts 的 BASE_PATH 需指向子路径）：
+#   DEPLOY_BASE=/admin npm run build
+# 构建后 index.html 内资源引用为 /admin/umi.js、/admin/umi.css。
+# 部署目录：mkdir -p /var/www/admin && cp -r dist/* /var/www/admin/
+#
+# server {
+#   listen 80;
+#   server_name admin.your.domain;
+#
+#   # SPA 子路径：用 root（路径拼接，无 alias+try_files 陷阱）
+#   #   请求 /admin/umi.js  →  /var/www/admin/umi.js
+#   #   请求 /admin/group   →  miss → fallback /admin/index.html → SPA 路由
+#   location /admin/ {
+#     root /var/www;
+#     index index.html;
+#     try_files $uri $uri/ /admin/index.html;
+#   }
+#   # 根访问 → 302 重定向到子路径
+#   location = / {
+#     return 302 /admin/;
+#   }
+#
+#   # /api 反代（路径不变，与根部署一致；后端不感知子路径）
+#   location /api/ {
+#     proxy_pass http://127.0.0.1:8080;
+#     proxy_set_header Host $host;
+#     proxy_set_header X-Real-IP $remote_addr;
+#     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#   }
+#
+#   # 静态资源长缓存（hash 文件名，immutable）
+#   location ~* \.(?:js|css|woff2?|png|jpe?g|svg)$ {
+#     expires 1y;
+#     add_header Cache-Control "public, immutable";
+#   }
+# }

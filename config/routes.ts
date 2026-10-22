@@ -22,16 +22,16 @@ export default [
     component: './DomainEntry',
   },
   {
-    path: '/scene',
-    name: '场景管理',
+    path: '/group',
+    name: '分组管理',
     icon: 'AppstoreOutlined',
-    component: './Scene',
+    component: './Group',
   },
   {
-    path: '/scene-config',
-    name: '场景配置',
+    path: '/group-config',
+    name: '分组配置',
     icon: 'SettingOutlined',
-    component: './SceneConfig',
+    component: './GroupConfig',
   },
   {
     path: '/tenant',

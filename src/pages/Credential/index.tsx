@@ -1,5 +1,5 @@
 // 凭证管理 —— SK 仅创建时返回明文一次；停用不可逆；AK 不复用；轮换=新建
-import { ModalForm, ProFormDigit, ProFormText, ProTable } from '@ant-design/pro-components';
+import { ModalForm, ProFormDigit, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, message, Modal, Popconfirm, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { credential } from '@/services';
@@ -11,7 +11,7 @@ import { useRef, useState } from 'react';
 const { Paragraph, Text } = Typography;
 
 export default function CredentialPage() {
-  const tableRef = useRef<any>();
+  const tableRef = useRef<ActionType>();
   const refresh = () => tableRef.current?.reload();
   const [tenantFilter, setTenantFilter] = useState<number>();
   const [skModal, setSkModal] = useState<{ accessKey: string; secretKey?: string } | null>(null);

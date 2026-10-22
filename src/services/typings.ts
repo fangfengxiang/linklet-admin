@@ -7,7 +7,7 @@ export type ActiveStatus = 1 | 2;
 /** 域名状态：1 新增 → 2 投产 → 3 下线（不可逆） */
 export type DomainStatus = 1 | 2 | 3;
 
-/** 后端统一响应封装 */
+/** 后端统一响应封装：成功 code=0，失败 code 为业务错误码 */
 export interface UnifiedResponse<T = unknown> {
   code: number;
   message: string;
@@ -36,20 +36,19 @@ export interface DomainEntry {
   disabled_at?: string | null;
 }
 
-export interface Scene {
+export interface Group {
   id: number;
-  scene_id: number;
+  group_id: number;
   name: string;
-  description?: string;
   domain_entry_id: number;
   status: ActiveStatus;
   created_at?: string;
   updated_at?: string;
 }
 
-export interface SceneConfigItem {
+export interface GroupConfigItem {
   id: number;
-  scene_id: number;
+  group_id: number;
   config_key: string;
   config_value: string;
   description?: string;
@@ -60,7 +59,7 @@ export interface SceneConfigItem {
 export interface Tenant {
   id: number;
   name: string;
-  scene_ids: number[];
+  group_ids: number[];
   status: ActiveStatus;
   created_at?: string;
   updated_at?: string;
@@ -79,7 +78,7 @@ export interface TenantCredential {
 
 export interface ShortLink {
   id: number;
-  scene_id: number;
+  group_id: number;
   code: string;
   dest_url: string; // 后端字段名为 dest_url，不可修改
   status: ActiveStatus;
@@ -88,10 +87,10 @@ export interface ShortLink {
   disabled_at?: string | null;
 }
 
-/** 创建短链请求体 */
+/** 创建短链请求体 —— 业务 API（/api/v1/shorten/*），需租户 AK/SK 签名 */
 export interface CreateShortLinkBody {
   target_url: string;
-  scene_id: number;
+  group_id: number;
   expires_at?: string | null;
 }
 
@@ -106,28 +105,28 @@ export interface CreateDomainEntryBody {
   description?: string;
 }
 
-export interface CreateSceneBody {
-  scene_id: number;
+export interface CreateGroupBody {
+  group_id: number;
   name: string;
   domain_entry_id: number;
 }
 
-export interface ConfigureSceneBody {
+export interface ConfigureGroupBody {
   domain_entry_id?: number;
   status?: ActiveStatus;
   name?: string;
 }
 
-export interface SetSceneConfigBody {
-  scene_id: number;
+export interface SetGroupConfigBody {
+  group_id: number;
   config_key: string;
   config_value: string;
   description?: string;
 }
 
-export interface GrantScenesBody {
+export interface GrantGroupsBody {
   id: number;
-  scene_ids: number[];
+  group_ids: number[];
 }
 
 export interface CreateCredentialBody {

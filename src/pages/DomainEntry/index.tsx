@@ -1,15 +1,15 @@
-// 域名资源管理 —— 状态 new(1)→deployed(2)→offline(3) 不可逆；有 Scene 绑定不可下线
-import { ModalForm, ProFormTextArea, ProFormText, ProTable } from '@ant-design/pro-components';
+// 域名资源管理 —— 状态 new(1)→deployed(2)→offline(3) 不可逆；有 Group 绑定不可下线
+import { ModalForm, ProFormTextArea, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Button, message, Popconfirm, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { domainEntry } from '@/services';
 import { DomainError } from '@/services/typings';
 import { DomainStatusTag } from '@/components/StatusTag';
-import type { DomainEntry } from '@/services/typings';
+import type { CreateDomainEntryBody, DomainEntry } from '@/services/typings';
 import { useRef } from 'react';
 
 export default function DomainEntryPage() {
-  const tableRef = useRef<any>();
+  const tableRef = useRef<ActionType>();
 
   const refresh = () => tableRef.current?.reload();
 
@@ -29,7 +29,7 @@ export default function DomainEntryPage() {
       message.success('已下线');
       refresh();
     } catch (e) {
-      // 后端 409：domain is still bound to active scenes
+      // 后端 409：domain is still bound to active groups
       message.error((e as DomainError).message);
     }
   };
@@ -48,7 +48,7 @@ export default function DomainEntryPage() {
           modalProps={{ destroyOnClose: true }}
           onFinish={async (values) => {
             try {
-              await domainEntry.create(values as any);
+              await domainEntry.create(values as CreateDomainEntryBody);
               message.success('创建成功');
               refresh();
               return true;
@@ -91,7 +91,7 @@ export default function DomainEntryPage() {
                 <Popconfirm
                   key="disable"
                   title="下线域名"
-                  description="若该域名仍被场景绑定，后端将拒绝。确认下线？"
+                  description="若该域名仍被分组绑定，后端将拒绝。确认下线？"
                   onConfirm={() => handleDisable(row)}
                 >
                   <a style={{ color: '#ff4d4f' }}>下线</a>
