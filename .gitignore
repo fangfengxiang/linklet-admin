@@ -40,6 +40,8 @@ pnpm-debug.log*
 .DS_Store
 .idea/
 .vscode/*
+# Claude Code 本地配置/会话（AI 助手私有数据）
+.claude/
 !.vscode/extensions.json
 .e2e/results/
 .e2e/cache/
