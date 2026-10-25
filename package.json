@@ -15,7 +15,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "e2e run --exclude-tag agent",
-    "e2e:serve": "max build && max preview"
+    "e2e:serve": "max build && max preview --port 8000"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
