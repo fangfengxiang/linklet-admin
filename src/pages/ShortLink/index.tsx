@@ -26,92 +26,94 @@ export default function ShortLinkPage() {
   };
 
   return (
-    <ProTable<ShortLink>
-      actionRef={tableRef}
-      rowKey="id"
-      headerTitle="短链管理"
-      search={false}
-      toolBarRender={() => [
-        <Space key="create">
-          <ModalForm
-            title="创建短链"
-            trigger={<Button type="primary" icon={<PlusOutlined />}>创建短链</Button>}
-            modalProps={{ destroyOnClose: true }}
-            onFinish={async (values) => {
-              try {
-                const res = await shortLink.create({
-                  target_url: values.target_url,
-                  group_id: values.group_id,
-                  expires_at: values.expires_at || null,
-                });
-                message.success(`创建成功，code: ${res.code}`);
-                refresh();
-                return true;
-              } catch (e) {
-                message.error((e as DomainError).message);
-                return false;
-              }
-            }}
-          >
-            <ShortLinkForm />
-          </ModalForm>
-          <ModalForm
-            title="生成短链（含完整URL）"
-            trigger={<Button icon={<PlusOutlined />}>生成短链</Button>}
-            modalProps={{ destroyOnClose: true }}
-            onFinish={async (values) => {
-              try {
-                const res = await shortLink.gen({
-                  target_url: values.target_url,
-                  group_id: values.group_id,
-                  expires_at: values.expires_at || null,
-                });
-                message.success(`生成成功，short_url: ${res.short_url}`);
-                refresh();
-                return true;
-              } catch (e) {
-                message.error((e as DomainError).message);
-                return false;
-              }
-            }}
-          >
-            <ShortLinkForm />
-          </ModalForm>
-        </Space>,
-      ]}
-      request={async () => {
-        try {
-          const data = await shortLink.list();
-          return { data, success: true };
-        } catch (e) {
-          message.error((e as DomainError).message);
-          return { data: [], success: false };
-        }
-      }}
-      columns={[
-        { title: 'ID', dataIndex: 'id', width: 60 },
-        { title: 'Code', dataIndex: 'code' },
-        { title: '目标URL', dataIndex: 'dest_url', ellipsis: true },
-        { title: '分组', dataIndex: 'group_id' },
-        { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
-        {
-          title: '过期', dataIndex: 'expires_at', width: 100,
-          render: (_, r) => r.expires_at ? <Tag>{r.expires_at}</Tag> : <Tag color="blue">永不过期</Tag>,
-        },
-        {
-          title: '操作', width: 140, valueType: 'option',
-          render: (_, row) => [
-            <a key="detail" onClick={() => setDetail(row)}>详情</a>,
-            row.status === 1 && (
-              <Popconfirm key="disable" title="停用短链？此操作不可逆，code 永不复用。" onConfirm={() => handleDisable(row)}>
-                <a style={{ color: '#ff4d4f' }}>停用</a>
-              </Popconfirm>
-            ),
-          ].filter(Boolean),
-        },
-      ]}
-    >
-      {/* 详情抽屉 —— target_url 只读 */}
+    <>
+      <ProTable<ShortLink>
+        actionRef={tableRef}
+        rowKey="id"
+        headerTitle="短链管理"
+        search={false}
+        toolBarRender={() => [
+          <Space key="create">
+            <ModalForm
+              title="创建短链"
+              trigger={<Button type="primary" icon={<PlusOutlined />}>创建短链</Button>}
+              modalProps={{ destroyOnHidden: true }}
+              onFinish={async (values) => {
+                try {
+                  const res = await shortLink.create({
+                    target_url: values.target_url,
+                    group_id: values.group_id,
+                    expires_at: values.expires_at || null,
+                  });
+                  message.success(`创建成功，code: ${res.code}`);
+                  refresh();
+                  return true;
+                } catch (e) {
+                  message.error((e as DomainError).message);
+                  return false;
+                }
+              }}
+            >
+              <ShortLinkForm />
+            </ModalForm>
+            <ModalForm
+              title="生成短链（含完整URL）"
+              trigger={<Button icon={<PlusOutlined />}>生成短链</Button>}
+              modalProps={{ destroyOnHidden: true }}
+              onFinish={async (values) => {
+                try {
+                  const res = await shortLink.gen({
+                    target_url: values.target_url,
+                    group_id: values.group_id,
+                    expires_at: values.expires_at || null,
+                  });
+                  message.success(`生成成功，short_url: ${res.short_url}`);
+                  refresh();
+                  return true;
+                } catch (e) {
+                  message.error((e as DomainError).message);
+                  return false;
+                }
+              }}
+            >
+              <ShortLinkForm />
+            </ModalForm>
+          </Space>,
+        ]}
+        request={async () => {
+          try {
+            const data = await shortLink.list();
+            return { data, success: true };
+          } catch (e) {
+            message.error((e as DomainError).message);
+            return { data: [], success: false };
+          }
+        }}
+        columns={[
+          { title: 'ID', dataIndex: 'id', width: 60 },
+          { title: 'Code', dataIndex: 'code' },
+          { title: '目标URL', dataIndex: 'dest_url', ellipsis: true },
+          { title: '分组', dataIndex: 'group_id' },
+          { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
+          {
+            title: '过期', dataIndex: 'expires_at', width: 100,
+            render: (_, r) => r.expires_at ? <Tag>{r.expires_at}</Tag> : <Tag color="blue">永不过期</Tag>,
+          },
+          {
+            title: '操作', width: 140, valueType: 'option',
+            render: (_, row) => [
+              <a key="detail" onClick={() => setDetail(row)}>详情</a>,
+              row.status === 1 && (
+                <Popconfirm key="disable" title="停用短链？此操作不可逆，code 永不复用。" onConfirm={() => handleDisable(row)}>
+                  <a style={{ color: '#ff4d4f' }}>停用</a>
+                </Popconfirm>
+              ),
+            ].filter(Boolean),
+          },
+        ]}
+      />
+
+      {/* 详情抽屉 —— target_url 只读；作为 ProTable 兄弟节点，确保受控 open 驱动 Drawer 渲染 */}
       <Drawer
         open={!!detail}
         onClose={() => setDetail(null)}
@@ -134,7 +136,7 @@ export default function ShortLinkPage() {
           </Space>
         )}
       </Drawer>
-    </ProTable>
+    </>
   );
 }
 

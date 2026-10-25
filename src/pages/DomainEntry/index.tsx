@@ -45,7 +45,7 @@ export default function DomainEntryPage() {
           key="create"
           title="新建域名"
           trigger={<Button type="primary" icon={<PlusOutlined />}>新建域名</Button>}
-          modalProps={{ destroyOnClose: true }}
+          modalProps={{ destroyOnHidden: true }}
           onFinish={async (values) => {
             try {
               await domainEntry.create(values as CreateDomainEntryBody);

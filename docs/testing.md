@@ -1,6 +1,6 @@
 # Linklet Admin 测试体系方案
 
-> 状态：组件测试骨架**已实现并跑通**；E2E 为**评估结论**，待按需接入。
+> 状态：组件测试骨架**已实现并跑通**；E2E **已落地**（8 文件 / 25 用例通过），详见 [e2e-guide.md](./e2e-guide.md)。
 
 ---
 
@@ -8,8 +8,8 @@
 
 | 层级 | 工具 | 职责 | 状态 |
 | --- | --- | --- | --- |
-| 组件测试 | Vitest 2 + @testing-library/react 16 + happy-dom | ProTable/ProForm 交互、必填校验、状态渲染 | 已实现（4 用例通过） |
-| E2E 测试 | Playwright（推荐） | 真浏览器跨页面流程、点击/导航 | 评估，待接入 |
+| 组件测试 | Vitest 2 + @testing-library/react 16 + happy-dom | ProTable/ProForm 交互、必填校验、状态渲染 | 已实现 |
+| E2E 测试 | tester-army/e2e + @e2e-dev/web（底层 Playwright） | 真浏览器跨页面流程、点击/导航 | 已实现（25 用例通过） |
 | Mock 数据 | in-app mock（`src/mock/` store+dispatch） | dev / E2E / 演示同源数据，遵守领域不变量 | 已实现（复用） |
 
 ---
@@ -49,7 +49,9 @@ npm run test:coverage # 覆盖率（需补装 @vitest/coverage-v8）
 
 ---
 
-## 3. E2E 评估（Playwright / agent-browser / tester-army / mock server）
+## 3. E2E 方案选型与落地
+
+> **已落地**：实际选用 `tester-army/e2e` + `@e2e-dev/web`（非裸 Playwright），因其 selector 自适应 + fixture 抽象对中后台 CRUD 够用。启动与编写见 [e2e-guide.md](./e2e-guide.md)。以下为选型时的方案对比记录。
 
 ### 3.1 方案对比
 
@@ -96,6 +98,6 @@ E2E 用例起 `max dev`（mock 默认开），点真实浏览器流程，断言�
 ---
 
 ## 4. 待优化项（非阻塞）
-- 生产代码 `ModalForm` 用了 `destroyOnClose`（antd 5 已弃用，建议 `destroyOnHidden`）。
+- ~~生产代码 `ModalForm` 用了 `destroyOnClose`~~ → 已全部改为 `destroyOnHidden`。
 - `antd message` 静态调用建议包 `<App>` 组件以消费 context（antd 5 推荐）。
 - 覆盖率按需补装 `@vitest/coverage-v8`。

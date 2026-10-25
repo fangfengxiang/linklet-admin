@@ -24,80 +24,84 @@ export default function TenantPage() {
   };
 
   return (
-    <ProTable<Tenant>
-      actionRef={tableRef}
-      rowKey="id"
-      headerTitle="租户管理"
-      search={false}
-      toolBarRender={() => [
-        <ModalForm
-          key="create"
-          title="新建租户"
-          trigger={<Button type="primary" icon={<PlusOutlined />}>新建租户</Button>}
-          modalProps={{ destroyOnClose: true }}
-          onFinish={async (values) => {
-            try {
-              await tenant.create(values as { name: string });
-              message.success('创建成功');
-              refresh();
-              return true;
-            } catch (e) {
-              message.error((e as DomainError).message);
-              return false;
-            }
-          }}
-        >
-          <ProFormText name="name" label="租户名称" rules={[{ required: true, max: 255 }]} />
-        </ModalForm>,
-      ]}
-      request={async () => {
-        try {
-          const data = await tenant.list();
-          return { data, success: true };
-        } catch (e) {
-          message.error((e as DomainError).message);
-          return { data: [], success: false };
-        }
-      }}
-      columns={[
-        { title: 'ID', dataIndex: 'id', width: 60 },
-        { title: '名称', dataIndex: 'name' },
-        {
-          title: '授权分组', dataIndex: 'group_ids',
-          render: (_, r) => r.group_ids?.length
-            ? <Space wrap>{r.group_ids.map((id) => <Tag key={id}>{id}</Tag>)}</Space>
-            : <span style={{ color: '#999' }}>无</span>,
-        },
-        { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
-        {
-          title: '操作', width: 160, valueType: 'option',
-          render: (_, row) => [
-            row.status === 1 ? (
-              <a key="grant" onClick={() => setGranting(row)}>授权</a>
-            ) : (
-              <span key="grant" style={{ color: '#999' }} title="租户已停用，管理 API 不可用">
-                授权
-              </span>
-            ),
-            <Popconfirm
-              key="status"
-              title={row.status === 1 ? '停用租户？' : '启用租户？'}
-              description="停用阻止管理 API，不影响已有短链解析。"
-              onConfirm={() => toggleStatus(row)}
-            >
-              <a style={{ color: row.status === 1 ? '#ff4d4f' : undefined }}>
-                {row.status === 1 ? '停用' : '启用'}
-              </a>
-            </Popconfirm>,
-          ],
-        },
-      ]}
-    >
+    <>
+      <ProTable<Tenant>
+        actionRef={tableRef}
+        rowKey="id"
+        headerTitle="租户管理"
+        search={false}
+        toolBarRender={() => [
+          <ModalForm
+            key="create"
+            title="新建租户"
+            trigger={<Button type="primary" icon={<PlusOutlined />}>新建租户</Button>}
+            modalProps={{ destroyOnHidden: true }}
+            onFinish={async (values) => {
+              try {
+                await tenant.create(values as { name: string });
+                message.success('创建成功');
+                refresh();
+                return true;
+              } catch (e) {
+                message.error((e as DomainError).message);
+                return false;
+              }
+            }}
+          >
+            <ProFormText name="name" label="租户名称" rules={[{ required: true, max: 255 }]} />
+          </ModalForm>,
+        ]}
+        request={async () => {
+          try {
+            const data = await tenant.list();
+            return { data, success: true };
+          } catch (e) {
+            message.error((e as DomainError).message);
+            return { data: [], success: false };
+          }
+        }}
+        columns={[
+          { title: 'ID', dataIndex: 'id', width: 60 },
+          { title: '名称', dataIndex: 'name' },
+          {
+            title: '授权分组', dataIndex: 'group_ids',
+            render: (_, r) => r.group_ids?.length
+              ? <Space wrap>{r.group_ids.map((id) => <Tag key={id}>{id}</Tag>)}</Space>
+              : <span style={{ color: '#999' }}>无</span>,
+          },
+          { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
+          {
+            title: '操作', width: 160, valueType: 'option',
+            render: (_, row) => [
+              row.status === 1 ? (
+                <a key="grant" onClick={() => setGranting(row)}>授权</a>
+              ) : (
+                <span key="grant" style={{ color: '#999' }} title="租户已停用，管理 API 不可用">
+                  授权
+                </span>
+              ),
+              <Popconfirm
+                key="status"
+                title={row.status === 1 ? '停用租户？' : '启用租户？'}
+                description="停用阻止管理 API，不影响已有短链解析。"
+                onConfirm={() => toggleStatus(row)}
+              >
+                <a style={{ color: row.status === 1 ? '#ff4d4f' : undefined }}>
+                  {row.status === 1 ? '停用' : '启用'}
+                </a>
+              </Popconfirm>,
+            ],
+          },
+        ]}
+      />
+
+      {/* 分组授权弹窗 —— 作为 ProTable 兄弟节点，确保受控 open 驱动 Modal 渲染。
+          此前作为 ProTable 子节点时受控 open 不生效，授权弹窗无法打开。 */}
       <ModalForm
         open={!!granting}
         onOpenChange={(open) => { if (!open) setGranting(null); }}
         title="分组授权"
-        modalProps={{ destroyOnClose: true }}
+        modalProps={{ destroyOnHidden: true }}
         initialValues={granting ? { group_ids: granting.group_ids } : undefined}
         onFinish={async (values) => {
           if (!granting) return false;
@@ -129,6 +133,6 @@ export default function TenantPage() {
           style={{ marginBottom: 16 }}
         />
       </ModalForm>
-    </ProTable>
+    </>
   );
 }

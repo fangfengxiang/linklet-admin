@@ -10,10 +10,11 @@ export default {
     app: {
       url: APP_URL,
       // 本地复用已起 dev server(reuseExisting);CI 无 dev server 时由 command 拉起
+      // CI 用 max build + max preview(预编译,避免 dev server 按需编译未完成时测试就跑)
       command: {
         executable: 'npm',
-        args: ['run', 'dev'],
-        startupTimeout: 180_000, // Umi Max 首次编译较慢,给足 3 分钟
+        args: ['run', 'e2e:serve'],
+        startupTimeout: 240_000, // max build + preview 首次较慢,给足 4 分钟
         reuseExisting: true,
         log: '.e2e/logs/app.log',
       },

@@ -2,8 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from './test-utils';
-import DomainSearchTable from './fixtures/DomainSearchTable';
+import { renderWithProviders } from '../test-utils';
+import DomainSearchTable from '../fixtures/DomainSearchTable';
 
 // 组件测试隔离数据层：mock 掉 service，返回固定 fixture 数据
 vi.mock('@/services', () => ({

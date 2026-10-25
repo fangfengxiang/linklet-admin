@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from './test-utils';
+import { renderWithProviders } from '../test-utils';
 import DomainEntryPage from '@/pages/DomainEntry';
 
 // 隔离数据层：mock service，返回固定数据

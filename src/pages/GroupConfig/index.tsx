@@ -35,7 +35,7 @@ export default function GroupConfigPage() {
           key="set"
           title="设置配置项"
           trigger={<Button type="primary" icon={<PlusOutlined />}>设置配置</Button>}
-          modalProps={{ destroyOnClose: true }}
+          modalProps={{ destroyOnHidden: true }}
           onFinish={async (values) => {
             try {
               await groupConfig.set(values as SetGroupConfigBody);
