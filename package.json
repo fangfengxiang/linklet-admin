@@ -18,7 +18,7 @@
     "e2e:serve": "max build && max preview --port 8000"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.5.2",
+    "@ant-design/icons": "^6.3.4",
     "@ant-design/pro-components": "^2.8.2",
     "antd": "^5.22.2",
     "dayjs": "^1.11.13",
