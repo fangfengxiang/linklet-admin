@@ -11,7 +11,7 @@ export const groupConfig = {
   set: (body: SetGroupConfigBody) =>
     fetchAPI<GroupConfigItem>('/api/v1/admin/group_config/set', { method: 'PUT', data: body }),
   delete: (group_id: number, config_key: string) =>
-    fetchAPI<{ group_id: number; config_key: string }>('/api/v1/admin/group_config/delete', {
+    fetchAPI<{ id: number }>('/api/v1/admin/group_config/delete', {
       method: 'DELETE',
       data: { group_id, config_key },
     }),

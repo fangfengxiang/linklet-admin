@@ -2,7 +2,8 @@
 import { db, ok, fail, genCode, nextId, fields, type Handler } from '../store';
 
 const handlers: Record<string, Handler> = {
-  'GET /api/v1/shorten/list': () => ok(db.shortLinks),
+  'GET /api/v1/shorten/list': (q) => ok(db.shortLinks.filter((row) =>
+    q.group_id === undefined || row.group_id === Number(q.group_id)).slice(0, 100)),
   'GET /api/v1/shorten/get': (q) => {
     const row = db.shortLinks.find((l) => l.code === q.code);
     return row ? ok(row) : fail(4006, 'link not found');
@@ -18,7 +19,7 @@ const handlers: Record<string, Handler> = {
       id: nextId(),
       group_id: group_id as number,
       code,
-      dest_url: target_url as string,
+      target_url: target_url as string,
       status: 1 as const,
       created_at: new Date().toISOString(),
       expires_at: (expires_at as string) || null,
@@ -38,7 +39,7 @@ const handlers: Record<string, Handler> = {
       id: nextId(),
       group_id: group_id as number,
       code,
-      dest_url: target_url as string,
+      target_url: target_url as string,
       status: 1 as const,
       created_at: new Date().toISOString(),
       expires_at: (expires_at as string) || null,

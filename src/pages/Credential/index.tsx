@@ -1,19 +1,25 @@
 // 凭证管理 —— SK 仅创建时返回明文一次；停用不可逆；AK 不复用；轮换=新建
-import { ModalForm, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
+import { ModalForm, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, InputNumber, message, Modal, Popconfirm, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { credential } from '@/services';
 import { DomainError } from '@/services/typings';
 import { ActiveStatusTag } from '@/components/StatusTag';
 import type { TenantCredential } from '@/services/typings';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const { Paragraph, Text } = Typography;
 
 export default function CredentialPage() {
   const tableRef = useRef<ActionType>();
+  const [listError, setListError] = useState<string>();
   const refresh = () => tableRef.current?.reload();
   const [tenantFilter, setTenantFilter] = useState<number>();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [skModal, setSkModal] = useState<{ accessKey: string; secretKey?: string } | null>(null);
 
   const handleDisable = async (row: TenantCredential) => {
@@ -28,11 +34,14 @@ export default function CredentialPage() {
 
   return (
     <>
+      {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
       <ProTable<TenantCredential>
         actionRef={tableRef}
         rowKey="id"
-        headerTitle="凭证管理"
+        headerTitle="凭证管理（最多100条）"
+        pagination={false}
         search={false}
+        params={{ tenant_id: tenantFilter }}
         toolBarRender={() => [
           // ProFormDigit 需 Form 上下文，toolBarRender 无之致 label 关联失效；
           // 改用 InputNumber + aria-label，可访问且 getByLabel 可定位
@@ -50,10 +59,11 @@ export default function CredentialPage() {
             title="新建凭证"
             trigger={<Button type="primary" icon={<PlusOutlined />} disabled={!tenantFilter}>新建凭证</Button>}
             modalProps={{ destroyOnHidden: true }}
-            onFinish={async (values) => {
+            onFinish={async () => {
               if (!tenantFilter) return false;
               try {
-                const res = await credential.create({ ...values, tenant_id: tenantFilter });
+                const res = await credential.create({ tenant_id: tenantFilter });
+                if (!mounted.current) return true;
                 // 明文 SK 仅此一次展示
                 setSkModal({ accessKey: res.access_key, secretKey: res.secret_key });
                 refresh();
@@ -64,7 +74,6 @@ export default function CredentialPage() {
               }
             }}
           >
-            <ProFormText name="description" label="说明" rules={[{ max: 255 }]} />
             <Alert
               type="warning"
               showIcon
@@ -74,12 +83,14 @@ export default function CredentialPage() {
           </ModalForm>,
         ]}
         request={async () => {
+          setListError(undefined);
           if (!tenantFilter) return { data: [], success: true };
           try {
             const data = await credential.list(tenantFilter);
             return { data, success: true };
           } catch (e) {
             message.error((e as DomainError).message);
+            setListError((e as DomainError).message);
             return { data: [], success: false };
           }
         }}
@@ -104,8 +115,9 @@ export default function CredentialPage() {
       />
 
       {/* 明文 SK 一次性展示弹窗 —— 关闭后不入本地状态；作为 ProTable 兄弟节点确保受控 open 生效 */}
-      <Modal
-        open={!!skModal}
+      {skModal && <Modal
+        open
+        destroyOnHidden
         onOk={() => setSkModal(null)}
         onCancel={() => setSkModal(null)}
         okText="我已保存"
@@ -123,7 +135,7 @@ export default function CredentialPage() {
           <Text copyable type="danger">{skModal?.secretKey}</Text>
         </Paragraph>
         <Alert type="warning" showIcon message="Secret Key 仅显示一次，关闭后无法再次获取。" />
-      </Modal>
+      </Modal>}
     </>
   );
 }

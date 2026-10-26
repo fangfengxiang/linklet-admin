@@ -7,9 +7,10 @@ const handlers: Record<string, Handler> = {
     if (tid) {
       const t = db.tenants.find((x) => x.id === Number(tid));
       const ids = t ? t.group_ids : [];
-      return ok(db.groups.filter((g) => ids.includes(g.group_id)));
+      return ok(db.groups.filter((g) => ids.includes(g.group_id))
+        .map((g) => ({ ...g, has_links: db.shortLinks.some((link) => link.group_id === g.group_id) })));
     }
-    return ok(db.groups);
+    return ok(db.groups.map((g) => ({ ...g, has_links: db.shortLinks.some((link) => link.group_id === g.group_id) })));
   },
   'POST /api/v1/admin/group/create': (_q, body) => {
     const { group_id, name, domain_entry_id } = fields(body);
@@ -27,16 +28,17 @@ const handlers: Record<string, Handler> = {
     return ok(row);
   },
   'PUT /api/v1/admin/group/configure': (_q, body) => {
-    const { group_id, domain_entry_id, status, name } = fields(body);
+    const { group_id, domain_entry_id, status } = fields(body);
     const row = db.groups.find((g) => g.group_id === group_id);
     if (!row) return fail(409, 'group not found');
     if (domain_entry_id !== undefined) {
+      if (domain_entry_id !== row.domain_entry_id && db.shortLinks.some((link) => link.group_id === row.group_id))
+        return fail(409, 'group with links cannot change domain');
       const dom = db.domains.find((d) => d.id === domain_entry_id);
       if (!dom || dom.status !== 2) return fail(4009, 'domain not deployed or not found');
       row.domain_entry_id = domain_entry_id as number;
     }
     if (status !== undefined) row.status = status as 1 | 2;
-    if (name !== undefined) row.name = name as string;
     return ok(row);
   },
 };

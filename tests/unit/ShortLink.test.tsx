@@ -1,137 +1,72 @@
-// ShortLink 页面测试 —— target_url 不可改；code 不复用；停用不可逆；expires_at null=不过期
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
-import ShortLinkPage from '@/pages/ShortLink';
-
+import ShortLinkPage, { normalizeExpiry } from '@/pages/ShortLink';
 vi.mock('@/services', () => ({
-  shortLink: {
-    list: vi.fn(),
-    create: vi.fn(),
-    gen: vi.fn(),
-    disable: vi.fn(),
-  },
-  group: {
-    list: vi.fn(),
-  },
+  shortLink: { list: vi.fn(), get: vi.fn(), create: vi.fn(), gen: vi.fn(), disable: vi.fn() },
+  group: { list: vi.fn() },
 }));
-
 import { shortLink, group } from '@/services';
-const mockList = vi.mocked(shortLink.list);
-const mockCreate = vi.mocked(shortLink.create);
-const mockGen = vi.mocked(shortLink.gen);
-const mockDisable = vi.mocked(shortLink.disable);
-const mockGroupList = vi.mocked(group.list);
-
 const links = [
-  { id: 1, group_id: 1001, code: 'aB9xK2', dest_url: 'https://example.com/page1', status: 1, created_at: '2026-09-10T00:00:00Z', expires_at: null },
-  { id: 3, group_id: 1001, code: 'oPp2xR', dest_url: 'https://example.com/old', status: 2, created_at: '2026-08-01T00:00:00Z', expires_at: null, disabled_at: '2026-09-01T00:00:00Z' },
+  { id: 1, group_id: 1001, code: 'aB9xK2', target_url: 'https://example.com/page1', status: 1 as const, expires_at: null },
+  { id: 3, group_id: 1001, code: 'oPp2xR', target_url: 'https://example.com/old', status: 2 as const, expires_at: null },
 ];
-const groups = [
-  { id: 1, group_id: 1001, name: '主站默认分组', domain_entry_id: 1, status: 1 },
-];
-
 beforeEach(() => {
-  mockList.mockReset();
-  mockCreate.mockReset();
-  mockGen.mockReset();
-  mockDisable.mockReset();
-  mockGroupList.mockReset();
+  vi.mocked(shortLink.list).mockReset().mockResolvedValue(links);
+  vi.mocked(shortLink.get).mockReset().mockResolvedValue(links[0]);
+  vi.mocked(shortLink.create).mockReset().mockResolvedValue({ code: 'NEW001' });
+  vi.mocked(shortLink.gen).mockReset().mockResolvedValue({ code: 'NEW002', short_url: 'https://s.example.com/NEW002' });
+  vi.mocked(shortLink.disable).mockReset().mockResolvedValue({ code: 'aB9xK2', status: 'disabled' });
+  vi.mocked(group.list).mockReset().mockResolvedValue([
+    { id: 1, group_id: 1001, name: '主站默认分组', domain_entry_id: 1, status: 1 },
+  ]);
 });
-
-describe('ShortLink 短链管理', () => {
-  it('加载列表显示短链数据', async () => {
-    mockList.mockResolvedValue(links);
-    mockGroupList.mockResolvedValue(groups);
+describe('ShortLink 真实请求契约', () => {
+  it('renders target_url and exposes only the irreversible disable action for active rows', async () => {
     renderWithProviders(<ShortLinkPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('aB9xK2')).toBeInTheDocument();
-      expect(screen.getByText('https://example.com/page1')).toBeInTheDocument();
-    });
+    const disabled = await screen.findByRole('row', { name: /oPp2xR/ });
+    expect(within(disabled).getByText('https://example.com/old')).toBeInTheDocument();
+    expect(within(disabled).queryByText('停用', { selector: 'a' })).not.toBeInTheDocument();
   });
-
-  it('停用态短链不显示停用操作（停用不可逆）', async () => {
-    mockList.mockResolvedValue(links);
-    mockGroupList.mockResolvedValue(groups);
+  it('loads details through the authenticated get endpoint and keeps the target read-only', async () => {
     renderWithProviders(<ShortLinkPage />);
-
-    await waitFor(() => expect(screen.getByText('oPp2xR')).toBeInTheDocument());
-    // 已停用的短链操作列只有"详情"，无"停用"
-    expect(screen.queryByText('停用')).not.toBeInTheDocument();
+    const row = await screen.findByRole('row', { name: /aB9xK2/ });
+    await userEvent.click(within(row).getByText('详情'));
+    const drawer = within(await screen.findByRole('dialog', { name: '短链详情' }));
+    expect(await drawer.findByText('https://example.com/page1')).toBeInTheDocument();
+    expect(shortLink.get).toHaveBeenCalledWith({ code: 'aB9xK2' });
+    expect(drawer.queryByRole('textbox')).not.toBeInTheDocument();
   });
-
-  it('点击详情后打开抽屉显示 dest_url（target_url 只读）', async () => {
-    mockList.mockResolvedValue(links);
-    mockGroupList.mockResolvedValue(groups);
-    const user = userEvent.setup();
+  it('disables only after confirmation', async () => {
     renderWithProviders(<ShortLinkPage />);
-
-    await waitFor(() => expect(screen.getByText('aB9xK2')).toBeInTheDocument());
-    await user.click(screen.getByText('详情'));
-
-    await waitFor(() => {
-      expect(screen.getByText('短链详情')).toBeInTheDocument();
-      expect(screen.getByText('https://example.com/page1')).toBeInTheDocument();
-    });
+    const row = await screen.findByRole('row', { name: /aB9xK2/ });
+    await userEvent.click(within(row).getByText('停用', { selector: 'a' }));
+    await userEvent.click(screen.getByRole('button', { name: /确\s*定/ }));
+    await waitFor(() => expect(shortLink.disable).toHaveBeenCalledWith('aB9xK2'));
   });
-
-  it('停用短链：Popconfirm 确认后调用 disable', async () => {
-    mockList.mockResolvedValue(links);
-    mockGroupList.mockResolvedValue(groups);
-    mockDisable.mockResolvedValue({ code: 'aB9xK2', status: 'disabled' });
-    const user = userEvent.setup();
+  it.each(['创建短链', '生成短链'])('submits the %s action with a permanent expiry', async (action) => {
     renderWithProviders(<ShortLinkPage />);
-
-    await waitFor(() => expect(screen.getByText('aB9xK2')).toBeInTheDocument());
-    await user.click(screen.getByText('停用'));
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    await waitFor(() => {
-      expect(mockDisable).toHaveBeenCalledWith('aB9xK2');
-    });
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(action) }));
+    const form = within(await screen.findByRole('dialog', { name: action === '生成短链' ? '生成短链（含完整URL）' : action }));
+    await userEvent.type(form.getByLabelText('目标URL'), 'https://test.com');
+    fireEvent.mouseDown(form.getByRole('combobox'));
+    await userEvent.click(await screen.findByText('1001 主站默认分组'));
+    await userEvent.click(form.getByRole('button', { name: /确\s*定/ }));
+    const method = action === '生成短链' ? shortLink.gen : shortLink.create;
+    await waitFor(() => expect(method).toHaveBeenCalledWith({ target_url: 'https://test.com', group_id: 1001, expires_at: null }));
   });
-
-  it('创建短链：填写表单提交调用 create', async () => {
-    mockList.mockResolvedValue([]);
-    mockGroupList.mockResolvedValue(groups);
-    mockCreate.mockResolvedValue({ code: 'NEW001' });
-    const user = userEvent.setup();
+  it('does not submit missing required fields', async () => {
     renderWithProviders(<ShortLinkPage />);
-
-    await user.click(screen.getByRole('button', { name: /创建短链/ }));
-
-    await user.type(screen.getByPlaceholderText('https://example.com/page'), 'https://test.com');
-
-    // 选择分组
-    await user.click(screen.getByText('请选择'));
-    await user.click(screen.getByText('1001 主站默认分组'));
-
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target_url: 'https://test.com',
-          group_id: 1001,
-          expires_at: null,
-        }),
-      );
-    });
+    await userEvent.click(screen.getByRole('button', { name: /创建短链/ }));
+    const form = within(await screen.findByRole('dialog', { name: /创建短链/ }));
+    await userEvent.click(form.getByRole('button', { name: /确\s*定/ }));
+    expect(shortLink.create).not.toHaveBeenCalled();
   });
-
-  it('必填校验：未填 target_url 提交，create 不被调用', async () => {
-    mockList.mockResolvedValue([]);
-    mockGroupList.mockResolvedValue(groups);
-    const user = userEvent.setup();
-    renderWithProviders(<ShortLinkPage />);
-
-    await user.click(screen.getByRole('button', { name: /创建短链/ }));
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    await waitFor(() => {
-      expect(mockCreate).not.toHaveBeenCalled();
-    });
+  it('serializes picker values as RFC3339 and preserves permanent links', () => {
+    expect(normalizeExpiry(null)).toBeNull();
+    expect(normalizeExpiry('2030-01-02 03:04:05')).toMatch(/^2030-01-0[12]T\d\d:\d\d:\d\d\.000Z$/);
+    expect(normalizeExpiry('2030-01-02T03:04:05+08:00')).toBe('2030-01-01T19:04:05.000Z');
+    expect(() => normalizeExpiry('not a date')).toThrow('过期时间无效');
   });
 });

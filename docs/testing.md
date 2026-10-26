@@ -1,5 +1,7 @@
 # Linklet Admin 测试体系方案
 
+真实后端验收新增独立七页浏览器套件与Node BFF回归测试，见[真实联调与验收](real-integration.md)。以下历史Mock方案不能作为真实接口验收证据。
+
 > 状态：组件测试骨架**已实现并跑通**；E2E **已落地**（8 文件 / 25 用例通过），详见 [e2e-guide.md](./e2e-guide.md)。
 
 ---

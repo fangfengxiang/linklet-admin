@@ -52,3 +52,6 @@ pnpm-debug.log*
 .e2e/summary.md
 .e2e/logs/
 .e2e/videos/
+
+# Real-backend browser acceptance artifacts (may include one-time test credentials)
+.e2e-real/

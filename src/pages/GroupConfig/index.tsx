@@ -2,15 +2,16 @@
 // 地道写法：ProTable search 模式做查询过滤（group_id 为必填搜索项），
 // 设置配置走独立 ModalForm（自带 group_id 字段，不依赖查询表单）。
 import { ModalForm, ProFormText, ProFormTextArea, ProTable, type ActionType } from '@ant-design/pro-components';
-import { Button, message, Popconfirm } from 'antd';
+import { Alert, Button, message, Popconfirm } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { groupConfig } from '@/services';
 import { DomainError } from '@/services/typings';
 import type { GroupConfigItem, SetGroupConfigBody } from '@/services/typings';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 export default function GroupConfigPage() {
   const tableRef = useRef<ActionType>();
+  const [listError, setListError] = useState<string>();
   const refresh = () => tableRef.current?.reload();
 
   const handleDelete = async (row: GroupConfigItem) => {
@@ -24,10 +25,13 @@ export default function GroupConfigPage() {
   };
 
   return (
+    <>
+      {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
     <ProTable<GroupConfigItem>
       actionRef={tableRef}
       rowKey="id"
-      headerTitle="分组配置"
+      headerTitle="分组配置（最多100条）"
+        pagination={false}
       search={{ labelWidth: 'auto' }}
       options={{ fullScreen: true }}
       toolBarRender={() => [
@@ -38,7 +42,7 @@ export default function GroupConfigPage() {
           modalProps={{ destroyOnHidden: true }}
           onFinish={async (values) => {
             try {
-              await groupConfig.set(values as SetGroupConfigBody);
+              await groupConfig.set({ ...values, group_id: Number(values.group_id), config_value: values.config_value ?? '' } as SetGroupConfigBody);
               message.success('已保存');
               refresh();
               return true;
@@ -50,11 +54,12 @@ export default function GroupConfigPage() {
         >
           <ProFormText name="group_id" label="分组编号" rules={[{ required: true }]} />
           <ProFormText name="config_key" label="配置键" rules={[{ required: true, max: 128 }]} />
-          <ProFormTextArea name="config_value" label="配置值" rules={[{ required: true, max: 65536 }]} />
+          <ProFormTextArea name="config_value" label="配置值" rules={[{ max: 65536 }]} />
           <ProFormText name="description" label="说明" rules={[{ max: 255 }]} />
         </ModalForm>,
       ]}
       request={async (params) => {
+        setListError(undefined);
         const gid = Number(params.group_id);
         if (!gid) return { data: [], success: true };
         try {
@@ -62,7 +67,8 @@ export default function GroupConfigPage() {
           return { data, success: true };
         } catch (e) {
           message.error((e as DomainError).message);
-          return { data: [], success: false };
+          setListError((e as DomainError).message);
+            return { data: [], success: false };
         }
       }}
       columns={[
@@ -81,5 +87,6 @@ export default function GroupConfigPage() {
         },
       ]}
     />
+    </>
   );
 }

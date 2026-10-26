@@ -38,8 +38,8 @@ const handlers: Record<string, Handler> = {
       (c) => c.group_id === gid && c.config_key === config_key,
     );
     if (idx < 0) return fail(409, 'config not found');
-    db.groupConfigs.splice(idx, 1);
-    return ok({ group_id: gid, config_key });
+    const [deleted] = db.groupConfigs.splice(idx, 1);
+    return ok({ id: deleted.id });
   },
 };
 export default handlers;

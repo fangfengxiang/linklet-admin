@@ -1,6 +1,6 @@
 // Tenant 页面测试 —— group_ids 授权集合（非所有权，去重）；停用阻止管理不影响解析
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import TenantPage from '@/pages/Tenant';
@@ -53,17 +53,15 @@ describe('Tenant 租户管理', () => {
     });
   });
 
-  it('停用态租户：授权操作不可点击（灰色 span）', async () => {
+  it('停用租户仍允许平台编辑分组授权', async () => {
     mockList.mockResolvedValue(tenants);
     mockGroupList.mockResolvedValue(groups);
     renderWithProviders(<TenantPage />);
 
     await waitFor(() => expect(screen.getByText('运营主体B')).toBeInTheDocument());
-    // 运营主体B status=2，授权为灰色 span
-    const grantSpans = screen.getAllByText('授权');
-    // 第 2 个租户的授权是灰色
-    const disabledGrant = grantSpans[1];
-    expect(disabledGrant.tagName).toBe('SPAN');
+    const row = await screen.findByRole('row', { name: /运营主体B/ });
+    await userEvent.click(within(row).getByText('授权'));
+    expect(await screen.findByRole('dialog', { name: '分组授权' })).toBeInTheDocument();
   });
 
   it('新建租户：填写名称提交，调用 create', async () => {
@@ -90,7 +88,7 @@ describe('Tenant 租户管理', () => {
     renderWithProviders(<TenantPage />);
 
     await waitFor(() => expect(screen.getByText('运营主体A')).toBeInTheDocument());
-    await user.click(screen.getByText('停用'));
+    await user.click(within(await screen.findByRole('row', { name: /运营主体A/ })).getByText('停用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {
@@ -106,7 +104,7 @@ describe('Tenant 租户管理', () => {
     renderWithProviders(<TenantPage />);
 
     await waitFor(() => expect(screen.getByText('运营主体B')).toBeInTheDocument());
-    await user.click(screen.getByText('启用'));
+    await user.click(within(await screen.findByRole('row', { name: /运营主体B/ })).getByText('启用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {
@@ -114,7 +112,7 @@ describe('Tenant 租户管理', () => {
     });
   });
 
-  it('授权分组：打开弹窗选择分组提交，调用 grant', async () => {
+  it('授权分组：打开弹窗提交既有授权集合，调用 grant', async () => {
     mockList.mockResolvedValue(tenants);
     mockGroupList.mockResolvedValue(groups);
     mockGrant.mockResolvedValue({ id: 1, name: '运营主体A', group_ids: [1001, 1002], status: 1 });
@@ -128,15 +126,26 @@ describe('Tenant 租户管理', () => {
     // 第 1 个租户的授权是可点击的 <a>
     await user.click(grantLinks[0]);
 
-    // 清空已有选择后重新选
-    await user.click(screen.getByText('请选择'));
-    await user.click(screen.getByText('1001 主站默认分组'));
-    await user.click(screen.getByText('1002 营销活动'));
-
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
+    const form = within(await screen.findByRole('dialog', { name: '分组授权' }));
+    await user.click(form.getByRole('button', { name: /确\s*定/ }));
 
     await waitFor(() => {
       expect(mockGrant).toHaveBeenCalledWith(1, expect.arrayContaining([1001, 1002]));
     });
   });
+  it('允许撤销全部分组授权，提交空数组', async () => {
+    mockList.mockResolvedValue(tenants);
+    mockGroupList.mockResolvedValue(groups);
+    mockGrant.mockResolvedValue({ ...tenants[0], status: 1, group_ids: [] });
+    renderWithProviders(<TenantPage />);
+    const row = await screen.findByRole('row', { name: /运营主体A/ });
+    await userEvent.click(within(row).getByText('授权'));
+    const form = within(await screen.findByRole('dialog', { name: '分组授权' }));
+    const select = form.getByRole('combobox');
+    fireEvent.keyDown(select, { key: 'Backspace', code: 'Backspace' });
+    fireEvent.keyDown(select, { key: 'Backspace', code: 'Backspace' });
+    await userEvent.click(form.getByRole('button', { name: /确\s*定/ }));
+    await waitFor(() => expect(mockGrant).toHaveBeenCalledWith(1, []));
+  });
+
 });

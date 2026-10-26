@@ -4,7 +4,7 @@ name: E2E Tests
 # 触发与 ci.yml 对齐：push main/master/feature-* 与 PR。
 on:
   push:
-    branches: [main, master, feature-*]
+    branches: [main, master, feature-*, "codex/**"]
   pull_request:
     branches: [main, master]
 

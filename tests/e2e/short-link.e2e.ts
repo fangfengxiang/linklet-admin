@@ -38,7 +38,7 @@ describe('short-link', { tags: ['short-link'], serial: true }, () => {
     const row = screen.getByRole('row').filter({ hasText: 'aB9xK2' });
     await row.getByText('详情').tap();
     await expect(screen.getByRole('dialog', '短链详情')).toBeVisible();
-    await expect(screen.getByText('目标 URL 不可修改', { exact: false })).toBeVisible();
+    await expect(screen.getByText(/目标\s*URL\s*不可修改/)).toBeVisible();
   });
 
   test('disables a short link (irreversible, code never reused)', async ({ app, screen }) => {

@@ -1,6 +1,6 @@
 // Credential 页面测试 —— SK 仅创建时返回明文一次；停用不可逆；AK 不复用；轮换=新建
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import CredentialPage from '@/pages/Credential';
@@ -27,6 +27,10 @@ beforeEach(() => {
   mockCreate.mockReset();
   mockDisable.mockReset();
   mockList.mockReset();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('Credential 凭证管理', () => {
@@ -66,9 +70,20 @@ describe('Credential 凭证管理', () => {
   it('新建凭证：提交后弹出 SK 一次性展示弹窗', async () => {
     mockList.mockResolvedValue([]);
     mockCreate.mockResolvedValue({ id: 3, access_key: 'AK_NEW', secret_key: 'SK_SECRET123' });
+    const makeStorage = () => ({
+      getItem: vi.fn(() => null),
+      setItem: vi.fn((_key: string, _value: string) => undefined),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      key: vi.fn(() => null),
+      length: 0,
+    });
+    const localStorage = makeStorage();
+    const sessionStorage = makeStorage();
+    vi.stubGlobal('localStorage', localStorage);
+    vi.stubGlobal('sessionStorage', sessionStorage);
     const user = userEvent.setup();
     renderWithProviders(<CredentialPage />);
-
     // 输入租户ID → 新建按钮启用
     const tenantInput = screen.getByRole('spinbutton');
     await user.type(tenantInput, '1');
@@ -86,6 +101,11 @@ describe('Credential 凭证管理', () => {
       expect(screen.getByText('AK_NEW')).toBeInTheDocument();
       expect(screen.getByText('SK_SECRET123')).toBeInTheDocument();
     });
+    expect(mockCreate).toHaveBeenCalledWith({ tenant_id: 1 });
+    await user.click(screen.getByRole('button', { name: '我已保存' }));
+    await waitFor(() => expect(screen.queryByText('SK_SECRET123')).not.toBeInTheDocument());
+    expect(localStorage.setItem.mock.calls.some(([, value]) => value.includes('SK_SECRET123'))).toBe(false);
+    expect(sessionStorage.setItem.mock.calls.some(([, value]) => value.includes('SK_SECRET123'))).toBe(false);
   });
 
   it('停用凭证：Popconfirm 确认后调用 disable', async () => {
@@ -98,7 +118,7 @@ describe('Credential 凭证管理', () => {
     await user.type(tenantInput, '1');
 
     await waitFor(() => expect(screen.getByText('AKL0001MOCK')).toBeInTheDocument());
-    await user.click(screen.getByText('停用'));
+    await user.click(within(await screen.findByRole('row', { name: /AKL0001MOCK/ })).getByText('停用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {

@@ -13,8 +13,7 @@ export const credential = {
       method: 'PUT',
       data: { access_key },
     }),
-  // 列表：后端无独立 credential/list，按租户列出由 tenant/list 间接获得；
-  // 此处保留按 tenant_id 查询的客户端约定，后端补全后直接生效
+  // 仅返回凭证的公开管理字段；列表不包含明文或密文 SK。
   list: (tenant_id: number) =>
     fetchAPI<TenantCredential[]>('/api/v1/admin/credential/list', {
       method: 'GET',

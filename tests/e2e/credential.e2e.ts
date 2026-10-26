@@ -3,8 +3,6 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 
-const RUN = process.env.CI ? 'ci' : String(Date.now());
-
 describe('credential', { tags: ['credential'], serial: true }, () => {
   test('filters credentials by tenant id and shows seed', async ({ app, screen }) => {
     await app.open('/credential');
@@ -19,7 +17,6 @@ describe('credential', { tags: ['credential'], serial: true }, () => {
     await screen.getByLabel('租户ID').fill('1');
     await screen.getByRole('button', /刷\s?新/).tap();
     await screen.getByRole('button', '新建凭证', { exact: false }).tap();
-    await screen.getByLabel('说明').fill(`e2e-cred-${RUN.slice(-5)}`);
     await screen.getByRole('button', /确\s?定/).tap();
     // SK 一次性弹窗
     await expect(screen.getByText('凭证创建成功')).toBeVisible();

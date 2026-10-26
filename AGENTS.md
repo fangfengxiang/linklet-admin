@@ -25,7 +25,7 @@
 ```bash
 npm install        # 安装依赖
 npm run dev        # 启动开发服务器（默认 Mock）
-MOCK=0 npm run dev # 连接真实后端（需配 LINKLET_BACKEND/AK/SK 环境变量）
+npm run dev:real  # 构建真实SPA并在127.0.0.1启动BFF（.env.runtime.local）
 npm run build      # 生产构建
 npm run lint       # ESLint + 类型检查
 ```
@@ -38,4 +38,13 @@ npm run lint       # ESLint + 类型检查
 
 ## 认证说明（重要）
 
-BFF 代理在服务端用 AK/SK 签名，SK 永不进浏览器。**登录与会话为独立后续 change，本期不实现**，当前 BFF 以配置 AK/SK + allow-all 身份运行，仅限本地/预置后端。
+BFF 代理在服务端用 AK/SK 签名，SK 永不进浏览器。**登录与会话为独立后续 change，本期不实现**，当前 BFF 以配置 AK/SK + allow-all 身份运行，仅限本地/预置后端。使用 `dev:real` 的 loopback BFF，禁止将无会话模式开放到公网。
+
+## 真实接口集成约定
+
+- Group有任意历史短链后禁止改绑域名；group_id/name在现有configure接口中只读。
+- 短链字段为target_url；expires_at提交RFC3339或null；列表与详情都用真实业务API。
+- `LINKLET_BACKEND`是Node服务端origin配置，浏览器固定同源/api；禁止前端签名或持有BFF配置SK。
+- 新签发凭证允许一次临时展示SK，关闭/卸载立即销毁，禁止浏览器持久化。
+- 所有列表最多100条，不宣称为全库总数。空列表与group_ids必须是数组。
+- 修改接口需跑lint、组件测试、BFF测试以及`E2E_REAL=1`真实后端浏览器验收。

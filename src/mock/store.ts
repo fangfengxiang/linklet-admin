@@ -71,8 +71,8 @@ export const db: {
     { id: 1, tenant_id: 1, access_key: 'AKL0001MOCK', description: '主凭证', status: 1, created_at: '2026-09-01T00:00:00Z' },
   ],
   shortLinks: [
-    { id: 1, group_id: 1001, code: 'aB9xK2', dest_url: 'https://example.com/page1', status: 1, created_at: '2026-09-10T00:00:00Z', expires_at: null },
-    { id: 2, group_id: 1002, code: 'mK3pQ7', dest_url: 'https://example.com/promo', status: 1, created_at: '2026-09-20T00:00:00Z', expires_at: '2026-12-31T23:59:59Z' },
-    { id: 3, group_id: 1001, code: 'oPp2xR', dest_url: 'https://example.com/old', status: 2, created_at: '2026-08-01T00:00:00Z', expires_at: null, disabled_at: '2026-09-01T00:00:00Z' },
+    { id: 1, group_id: 1001, code: 'aB9xK2', target_url: 'https://example.com/page1', status: 1, created_at: '2026-09-10T00:00:00Z', expires_at: null },
+    { id: 2, group_id: 1002, code: 'mK3pQ7', target_url: 'https://example.com/promo', status: 1, created_at: '2026-09-20T00:00:00Z', expires_at: '2026-12-31T23:59:59Z' },
+    { id: 3, group_id: 1001, code: 'oPp2xR', target_url: 'https://example.com/old', status: 2, created_at: '2026-08-01T00:00:00Z', expires_at: null, disabled_at: '2026-09-01T00:00:00Z' },
   ],
 };

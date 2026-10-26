@@ -1,15 +1,16 @@
 // 域名资源管理 —— 状态 new(1)→deployed(2)→offline(3) 不可逆；有 Group 绑定不可下线
 import { ModalForm, ProFormTextArea, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
-import { Button, message, Popconfirm, Space } from 'antd';
+import { Alert, Button, message, Popconfirm, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { domainEntry } from '@/services';
 import { DomainError } from '@/services/typings';
 import { DomainStatusTag } from '@/components/StatusTag';
 import type { CreateDomainEntryBody, DomainEntry } from '@/services/typings';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 export default function DomainEntryPage() {
   const tableRef = useRef<ActionType>();
+  const [listError, setListError] = useState<string>();
 
   const refresh = () => tableRef.current?.reload();
 
@@ -35,10 +36,13 @@ export default function DomainEntryPage() {
   };
 
   return (
+    <>
+      {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
     <ProTable<DomainEntry>
       actionRef={tableRef}
       rowKey="id"
-      headerTitle="域名资源"
+      headerTitle="域名资源（最多100条）"
+        pagination={false}
       search={false}
       toolBarRender={() => [
         <ModalForm
@@ -64,12 +68,14 @@ export default function DomainEntryPage() {
         </ModalForm>,
       ]}
       request={async () => {
+        setListError(undefined);
         try {
           const data = await domainEntry.list();
           return { data, success: true };
         } catch (e) {
           message.error((e as DomainError).message);
-          return { data: [], success: false };
+          setListError((e as DomainError).message);
+            return { data: [], success: false };
         }
       }}
       columns={[
@@ -103,5 +109,6 @@ export default function DomainEntryPage() {
         },
       ]}
     />
+    </>
   );
 }

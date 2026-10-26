@@ -1,0 +1,39 @@
+# Dedicated local fixtures; never point this volume/bootstrap at production.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: linklet
+      POSTGRES_USER: linklet
+      POSTGRES_PASSWORD: linklet_local_only
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ${LINKLET_SOURCE:-../../linklet}/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      - ${LINKLET_SOURCE:-../../linklet}/migrations/003_integrity.sql:/docker-entrypoint-initdb.d/003_integrity.sql:ro
+      - ${LINKLET_SOURCE:-../../linklet}/migrations/004_v02_expand.sql:/docker-entrypoint-initdb.d/004_v02_expand.sql:ro
+      - ${LINKLET_SOURCE:-../../linklet}/migrations/005_v02_switch.sql:/docker-entrypoint-initdb.d/005_v02_switch.sql:ro
+      - ${LINKLET_SOURCE:-../../linklet}/migrations/006_group_contract.sql:/docker-entrypoint-initdb.d/006_group_contract.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U linklet]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  linklet:
+    build:
+      context: ${LINKLET_SOURCE:-../../linklet}
+      target: runtime
+    ports: ["127.0.0.1:${LINKLET_LOCAL_PORT:-18080}:8081"]
+    volumes:
+      - ./local-linklet.conf:/etc/nginx/conf.d/local-linklet.conf:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: linklet
+      PGUSER: linklet
+      PGPASSWORD: linklet_local_only
+      LINKLET_ENCRYPTION_KEY: ${LINKLET_ENCRYPTION_KEY:?Set a local 64-character hexadecimal key}
+      CACHE_SYNC_INTERVAL: 0.5
+volumes:
+  pgdata:

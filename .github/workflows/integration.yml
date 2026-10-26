@@ -1,0 +1,68 @@
+name: Real backend integration
+
+on:
+  push:
+    branches: [main, master, 'codex/**']
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: integration-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  real-backend:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: fangfengxiang/linklet
+          ref: 720744e661a9327d58bc7b769c17bade098e53df
+          path: .e2e/linklet
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx @e2e-dev/web install chromium --with-deps
+      - name: Start isolated PostgreSQL and OpenResty
+        run: |
+          python3 - <<'PY'
+          import os, secrets
+          from pathlib import Path
+          env = Path('/tmp/linklet-docker.env')
+          env.write_text('LINKLET_SOURCE=' + os.getcwd() + '/.e2e/linklet\nLINKLET_ENCRYPTION_KEY=' + secrets.token_hex(32) + '\n')
+          env.chmod(0o600)
+          PY
+          docker compose -p linklet-admin-ci --env-file /tmp/linklet-docker.env -f deploy/linklet.compose.yml up --build -d --wait
+      - name: Bootstrap local signing identity
+        run: npm run seed:local
+      - name: Build real console and verify credential isolation
+        run: |
+          MOCK=0 npm run build
+          node --env-file=.env.runtime.local scripts/check-bundle.mjs
+      - name: Start same-origin loopback BFF
+        run: |
+          npm run serve:real > /tmp/linklet-bff.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/__console/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/linklet-bff.log
+          exit 1
+      - name: Exercise every page against the real backend
+        run: |
+          export E2E_TENANT_ID="$(sed -n 's/^E2E_TENANT_ID=//p' .env.runtime.local)"
+          E2E_REAL=1 APP_URL=http://127.0.0.1:8000 npm run test:e2e:real -- --workers 1 --trace on
+      - name: Upload real acceptance results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-backend-e2e
+          path: .e2e/results
+          retention-days: 7
+      - name: Stop isolated services
+        if: always()
+        run: docker compose -p linklet-admin-ci --env-file /tmp/linklet-docker.env -f deploy/linklet.compose.yml down --volumes

@@ -2,7 +2,7 @@
 // 设计原因：screen.getByRole('option') 会触发 Select onBlur 关闭下拉；
 // getByLabel('xx') 对 antd Select 命中的是 label 文本节点，点击无法打开下拉。
 // 故统一用 browser.locator CSS 连续点击（开下拉→选可见 option）。
-import type { Browser } from 'e2e';
+import type { Browser } from '@e2e-dev/web';
 
 /** 打开 antd Select 下拉并选中可见的 option（按 title 属性匹配） */
 export async function pickAntdSelect(

@@ -29,15 +29,18 @@ describe('group', { tags: ['group'], serial: true }, () => {
     await expect(screen.getByText(String(gid))).toBeVisible();
   });
 
-  test('configures an existing group (rename only)', async ({ app, screen }) => {
+  test('configures group status while identifiers and name stay read-only', async ({ app, screen, browser }) => {
     await app.open('/group');
     await expect(screen.getByText('主站默认分组')).toBeVisible(); // 等表格稳定
     const row = screen.getByRole('row').filter({ hasText: '主站默认分组' });
     await row.getByText('配置').click();
     await expect(screen.getByRole('dialog', '分组配置')).toBeVisible(); // 精确匹配配置弹窗
-    // 配置弹窗：group_id 字段 disabled（不可改）；只改 name，domain/status 走 initialValues
-    await screen.getByLabel('分组名称').fill('主站默认分组-改');
+    expect(await screen.getByRole('textbox', /^分组编号/).isDisabled()).toBe(true);
+    expect(await screen.getByRole('textbox', /^分组名称/).isDisabled()).toBe(true);
+    await browser.locator('.ant-modal-body .ant-select-selector').last().click();
+    await browser.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option[title="停用"]').click();
     await screen.getByRole('button', '确 定').tap();
     await expect(screen.getByText('配置已更新')).toBeVisible();
+    await expect(row.getByText('停用', { exact: true })).toBeVisible();
   });
 });

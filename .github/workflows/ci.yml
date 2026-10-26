@@ -5,7 +5,7 @@ name: CI
 # Adapted from the project's GitHub Actions conventions: checkout@v4, node cache, concurrency.
 on:
   push:
-    branches: [main, master, feature-*]
+    branches: [main, master, feature-*, "codex/**"]
   pull_request:
     branches: [main, master]
 
@@ -21,10 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -36,7 +36,7 @@ jobs:
         run: npx max setup
 
       - name: Lint (eslint + tsc)
-        run: npm run lint
+        run: npm run lint && npm run test:e2e:types
 
       - name: Build (default, mock mode)
         run: npm run build
@@ -59,10 +59,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -74,3 +74,6 @@ jobs:
 
       - name: Run Vitest
         run: npm run test
+
+      - name: Test server-side signing proxy
+        run: npm run test:bff

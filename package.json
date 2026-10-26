@@ -15,7 +15,13 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "e2e run --exclude-tag agent",
-    "e2e:serve": "max build && max preview --port 8000"
+    "e2e:serve": "max build && max preview --port 8000",
+    "dev:real": "node --env-file-if-exists=.env.runtime.local scripts/dev-real.mjs",
+    "serve:real": "node --env-file-if-exists=.env.runtime.local server/bff.mjs",
+    "seed:local": "node --env-file-if-exists=.env.local scripts/seed-local.mjs",
+    "test:bff": "node --test tests/server/*.test.mjs",
+    "test:e2e:real": "E2E_REAL=1 e2e run --exclude-tag agent",
+    "test:e2e:types": "tsc --noEmit --strict --target ESNext --module ESNext --moduleResolution Bundler --skipLibCheck tests/e2e/*.ts e2e.config.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -46,7 +52,7 @@
     "vitest": "^2.1.9"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.22.3"
   },
   "overrides": {
     "react": "$react",

@@ -5,6 +5,8 @@
 
 ---
 
+真实后端验收使用 `E2E_REAL=1` 的独立套件，见 [真实联调与验收](real-integration.md)。以下默认套件验证 Mock 演示，不能替代真实接口验收。
+
 ## 1. 概述
 
 linklet-admin 的 E2E 测试通过真实浏览器（headless Chromium）逐页面点击：
@@ -36,7 +38,7 @@ Mock 数据复用 `src/mock/` 的 in-app store，无需独立 mock server，也�
 npm install        # 首次安装依赖（含 e2e、@e2e-dev/web、chromium）
 ```
 
-Node ≥ 18。chromium 由 `@e2e-dev/web` 自动下载。
+Node ≥ 22.22.3。chromium 由 `@e2e-dev/web` 自动下载。
 
 ### 2.2 启动 dev server（Mock 模式）
 

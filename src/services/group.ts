@@ -8,8 +8,8 @@ export const group = {
   list: (tenant_id?: number) =>
     fetchAPI<Group[]>('/api/v1/admin/group/list', {
       method: 'GET',
-      params: tenant_id ? { tenant_id } : undefined,
+      params: tenant_id === undefined ? undefined : { tenant_id },
     }),
   configure: (group_id: number, body: ConfigureGroupBody) =>
-    fetchAPI<Group>('/api/v1/admin/group/configure', { method: 'PUT', data: { group_id, ...body } }),
+    fetchAPI<Group>('/api/v1/admin/group/configure', { method: 'PUT', data: { group_id, domain_entry_id: body.domain_entry_id, status: body.status } }),
 };

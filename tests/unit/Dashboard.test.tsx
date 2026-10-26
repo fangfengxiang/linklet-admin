@@ -24,8 +24,8 @@ beforeEach(() => {
 describe('Dashboard 仪表盘', () => {
   it('加载后展示 4 个统计卡片及正确计数', async () => {
     vi.mocked(shortLink.list).mockResolvedValue([
-      { id: 1, group_id: 1, code: 'a', dest_url: 'https://a.com', status: 1 },
-      { id: 2, group_id: 1, code: 'b', dest_url: 'https://b.com', status: 1 },
+      { id: 1, group_id: 1, code: 'a', target_url: 'https://a.com', status: 1 },
+      { id: 2, group_id: 1, code: 'b', target_url: 'https://b.com', status: 1 },
     ]);
     vi.mocked(group.list).mockResolvedValue([
       { id: 1, group_id: 1001, name: 'G1', domain_entry_id: 1, status: 1 },
@@ -45,7 +45,7 @@ describe('Dashboard 仪表盘', () => {
     renderWithProviders(<Dashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('短链总数')).toBeInTheDocument();
+      expect(screen.getByText('短链记录数')).toBeInTheDocument();
       expect(screen.getByText('分组数')).toBeInTheDocument();
       expect(screen.getByText('域名数')).toBeInTheDocument();
       expect(screen.getByText('租户数')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('Dashboard 仪表盘', () => {
     renderWithProviders(<Dashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('短链总数')).toBeInTheDocument();
+      expect(screen.getByText('短链记录数')).toBeInTheDocument();
       expect(screen.getByText('分组数')).toBeInTheDocument();
       expect(screen.getByText('域名数')).toBeInTheDocument();
       expect(screen.getByText('租户数')).toBeInTheDocument();

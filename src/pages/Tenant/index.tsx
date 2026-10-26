@@ -10,6 +10,7 @@ import { useRef, useState } from 'react';
 
 export default function TenantPage() {
   const tableRef = useRef<ActionType>();
+  const [listError, setListError] = useState<string>();
   const refresh = () => tableRef.current?.reload();
   const [granting, setGranting] = useState<Tenant | null>(null);
 
@@ -25,10 +26,12 @@ export default function TenantPage() {
 
   return (
     <>
+      {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
       <ProTable<Tenant>
         actionRef={tableRef}
         rowKey="id"
-        headerTitle="租户管理"
+        headerTitle="租户管理（最多100条）"
+        pagination={false}
         search={false}
         toolBarRender={() => [
           <ModalForm
@@ -52,11 +55,13 @@ export default function TenantPage() {
           </ModalForm>,
         ]}
         request={async () => {
+          setListError(undefined);
           try {
             const data = await tenant.list();
             return { data, success: true };
           } catch (e) {
             message.error((e as DomainError).message);
+            setListError((e as DomainError).message);
             return { data: [], success: false };
           }
         }}
@@ -73,17 +78,11 @@ export default function TenantPage() {
           {
             title: '操作', width: 160, valueType: 'option',
             render: (_, row) => [
-              row.status === 1 ? (
-                <a key="grant" onClick={() => setGranting(row)}>授权</a>
-              ) : (
-                <span key="grant" style={{ color: '#999' }} title="租户已停用，管理 API 不可用">
-                  授权
-                </span>
-              ),
+              <a key="grant" onClick={() => setGranting(row)}>授权</a>,
               <Popconfirm
                 key="status"
                 title={row.status === 1 ? '停用租户？' : '启用租户？'}
-                description="停用阻止管理 API，不影响已有短链解析。"
+                description="停用拒绝该租户的业务 API，不影响平台配置或已有短链解析。"
                 onConfirm={() => toggleStatus(row)}
               >
                 <a style={{ color: row.status === 1 ? '#ff4d4f' : undefined }}>
@@ -106,7 +105,7 @@ export default function TenantPage() {
         onFinish={async (values) => {
           if (!granting) return false;
           try {
-            await tenant.grant(granting.id, values.group_ids || []);
+            await tenant.grant(granting.id, [...new Set<number>(values.group_ids || [])]);
             message.success('授权已更新');
             refresh();
             return true;
@@ -124,7 +123,7 @@ export default function TenantPage() {
             const list = await group.list();
             return list.map((g) => ({ label: `${g.group_id} ${g.name}`, value: g.group_id }));
           }}
-          rules={[{ required: true }]}
+          tooltip="留空可撤销全部分组授权"
         />
         <Alert
           type="info"

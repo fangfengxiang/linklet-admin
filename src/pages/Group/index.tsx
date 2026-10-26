@@ -1,4 +1,4 @@
-// 分组管理 —— group_id 不可改；可改绑域名；停用不影响已有短链
+// 分组管理 —— 业务编号不可改；已有短链后冻结域名绑定。
 import { ModalForm, ProForm, ProFormDigit, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Button, message, Alert } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -10,15 +10,18 @@ import { useRef, useState } from 'react';
 
 export default function GroupPage() {
   const tableRef = useRef<ActionType>();
+  const [listError, setListError] = useState<string>();
   const refresh = () => tableRef.current?.reload();
   const [editing, setEditing] = useState<Group | null>(null);
 
   return (
     <>
+      {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
       <ProTable<Group>
         actionRef={tableRef}
         rowKey="id"
-        headerTitle="分组管理"
+        headerTitle="分组管理（最多100条）"
+        pagination={false}
         search={false}
         toolBarRender={() => [
           <ModalForm
@@ -44,11 +47,13 @@ export default function GroupPage() {
           </ModalForm>,
         ]}
         request={async () => {
+          setListError(undefined);
           try {
             const data = await group.list();
             return { data, success: true };
           } catch (e) {
             message.error((e as DomainError).message);
+            setListError((e as DomainError).message);
             return { data: [], success: false };
           }
         }}
@@ -75,7 +80,8 @@ export default function GroupPage() {
         onFinish={async (values) => {
           if (!editing) return false;
           try {
-            await group.configure(editing.group_id, values as ConfigureGroupBody);
+            const body: ConfigureGroupBody = { domain_entry_id: values.domain_entry_id, status: values.status };
+            await group.configure(editing.group_id, body);
             message.success('配置已更新');
             refresh();
             return true;
@@ -87,10 +93,10 @@ export default function GroupPage() {
       >
         <ProForm.Group>
           <ProFormText name="group_id" label="分组编号" disabled tooltip="分组编号创建后不可修改" />
-          <ProFormText name="name" label="分组名称" rules={[{ max: 255 }]} />
+          <ProFormText name="name" label="分组名称" disabled tooltip="当前接口不支持修改分组名称" />
         </ProForm.Group>
         <ProForm.Group>
-          <DomainSelect />
+          <DomainSelect disabled={editing?.has_links === true} />
           <ProFormSelect
             name="status"
             label="状态"
@@ -100,7 +106,9 @@ export default function GroupPage() {
         <Alert
           type="info"
           showIcon
-          message="停用分组不影响已有短链的解析跳转，仅阻止在该分组下创建新短链。"
+          message={editing?.has_links
+            ? '本分组已创建短链，域名绑定已冻结；停用或过期的短链也会保留绑定。'
+            : '仅无短链的分组可改绑域名。停用分组只阻止创建，不影响已有短链跳转。'}
           style={{ marginBottom: 16 }}
         />
       </ModalForm>
@@ -109,11 +117,12 @@ export default function GroupPage() {
 }
 
 /** 域名选择器：仅列出已投产域名 */
-function DomainSelect() {
+function DomainSelect({ disabled = false }: { disabled?: boolean }) {
   return (
     <ProFormSelect
       name="domain_entry_id"
       label="绑定域名"
+      disabled={disabled}
       request={async () => {
         const list = await domainEntry.list();
         return list

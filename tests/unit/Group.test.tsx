@@ -1,119 +1,75 @@
-// Group 页面测试 —— group_id 不可改；可改绑域名；停用不影响已有短链
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import GroupPage from '@/pages/Group';
 
 vi.mock('@/services', () => ({
-  group: {
-    create: vi.fn(),
-    list: vi.fn(),
-    configure: vi.fn(),
-  },
-  domainEntry: {
-    list: vi.fn(),
-  },
+  group: { create: vi.fn(), list: vi.fn(), configure: vi.fn() },
+  domainEntry: { list: vi.fn() },
 }));
-
 import { group, domainEntry } from '@/services';
-const mockCreate = vi.mocked(group.create);
-const mockList = vi.mocked(group.list);
-const mockConfigure = vi.mocked(group.configure);
-const mockDomainList = vi.mocked(domainEntry.list);
-
 const groups = [
-  { id: 1, group_id: 1001, name: '主站默认分组', domain_entry_id: 1, status: 1 },
-  { id: 2, group_id: 1002, name: '营销活动', domain_entry_id: 2, status: 1 },
+  { id: 1, group_id: 1001, name: '主站默认分组', domain_entry_id: 1, status: 1 as const, has_links: false },
+  { id: 2, group_id: 1002, name: '营销活动', domain_entry_id: 2, status: 1 as const, has_links: true },
 ];
 const domains = [
-  { id: 1, domain: 's.example.com', tag: '主站', status: 2 },
-  { id: 2, domain: 'go.example.com', tag: '营销', status: 2 },
-  { id: 3, domain: 'dev.example.com', tag: '测试', status: 1 },
+  { id: 1, domain: 's.example.com', status: 2 as const },
+  { id: 2, domain: 'go.example.com', status: 2 as const },
+  { id: 3, domain: 'dev.example.com', status: 1 as const },
 ];
-
 beforeEach(() => {
-  mockCreate.mockReset();
-  mockList.mockReset();
-  mockConfigure.mockReset();
-  mockDomainList.mockReset();
+  vi.mocked(group.create).mockReset();
+  vi.mocked(group.configure).mockReset();
+  vi.mocked(group.list).mockReset().mockResolvedValue(groups);
+  vi.mocked(domainEntry.list).mockReset().mockResolvedValue(domains);
 });
 
-describe('Group 分组管理', () => {
-  it('加载列表显示分组数据', async () => {
-    mockList.mockResolvedValue(groups);
-    mockDomainList.mockResolvedValue(domains);
-    renderWithProviders(<GroupPage />);
+async function configureRow(name: string) {
+  const row = await screen.findByRole('row', { name: new RegExp(name) });
+  await userEvent.click(within(row).getByText('配置'));
+  return within(await screen.findByRole('dialog', { name: '分组配置' }));
+}
 
-    await waitFor(() => {
-      expect(screen.getByText('主站默认分组')).toBeInTheDocument();
-      expect(screen.getByText('营销活动')).toBeInTheDocument();
-    });
+describe('Group 后端配置边界', () => {
+  it('loads platform groups and makes the bounded list explicit', async () => {
+    renderWithProviders(<GroupPage />);
+    expect(await screen.findByText('主站默认分组')).toBeInTheDocument();
+    expect(screen.getByText('分组管理（最多100条）')).toBeInTheDocument();
+    expect(group.list).toHaveBeenCalledWith();
   });
-
-  it('新建分组：填写表单提交，调用 create', async () => {
-    mockList.mockResolvedValue([]);
-    mockDomainList.mockResolvedValue(domains);
-    mockCreate.mockResolvedValue({ id: 3, group_id: 1003, name: '新组', domain_entry_id: 1, status: 1 });
-    const user = userEvent.setup();
+  it('creates a group under a deployed domain', async () => {
+    vi.mocked(group.create).mockResolvedValue(groups[0]);
     renderWithProviders(<GroupPage />);
-
-    await user.click(screen.getByRole('button', { name: /新建分组/ }));
-
-    await user.type(screen.getByLabelText('分组编号'), '1003');
-    await user.type(screen.getByLabelText('分组名称'), '新组');
-
-    // 选择域名（仅已投产域名：s.example.com / go.example.com）
-    await user.click(screen.getByText('请选择'));
-    await user.click(screen.getByText('s.example.com'));
-
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          group_id: 1003,
-          name: '新组',
-          domain_entry_id: 1,
-        }),
-      );
-    });
+    await userEvent.click(screen.getByRole('button', { name: /新建分组/ }));
+    const form = within(await screen.findByRole('dialog', { name: '新建分组' }));
+    await userEvent.type(form.getByLabelText('分组编号'), '1003');
+    await userEvent.type(form.getByLabelText('分组名称'), '新组');
+    fireEvent.mouseDown(form.getByRole('combobox'));
+    await userEvent.click(await screen.findByText('s.example.com'));
+    await userEvent.click(form.getByRole('button', { name: /确\s*定/ }));
+    await waitFor(() => expect(group.create).toHaveBeenCalledWith(
+      expect.objectContaining({ group_id: 1003, name: '新组', domain_entry_id: 1 })));
   });
-
-  it('配置分组：group_id 字段 disabled（创建后不可改）', async () => {
-    mockList.mockResolvedValue(groups);
-    mockDomainList.mockResolvedValue(domains);
-    const user = userEvent.setup();
+  it('keeps business identity and unsupported name editing read-only', async () => {
     renderWithProviders(<GroupPage />);
-
-    await waitFor(() => expect(screen.getByText('主站默认分组')).toBeInTheDocument());
-    await user.click(screen.getByText('配置'));
-
-    const gidInput = screen.getByLabelText('分组编号');
-    expect(gidInput).toBeDisabled();
+    const form = await configureRow('主站默认分组');
+    expect(form.getByLabelText('分组编号')).toBeDisabled();
+    expect(form.getByLabelText('分组名称')).toBeDisabled();
+    vi.mocked(group.configure).mockResolvedValue(groups[0]);
+    await userEvent.click(form.getByRole('button', { name: /确\s*定/ }));
+    await waitFor(() => expect(group.configure).toHaveBeenCalledWith(1001,
+      { domain_entry_id: 1, status: 1 }));
   });
-
-  it('配置分组：修改名称提交，调用 configure', async () => {
-    mockList.mockResolvedValue(groups);
-    mockDomainList.mockResolvedValue(domains);
-    mockConfigure.mockResolvedValue({ id: 1, group_id: 1001, name: '改名后', domain_entry_id: 1, status: 1 });
-    const user = userEvent.setup();
+  it('freezes domain editing when the group has any issued links', async () => {
     renderWithProviders(<GroupPage />);
-
-    await waitFor(() => expect(screen.getByText('主站默认分组')).toBeInTheDocument());
-    await user.click(screen.getByText('配置'));
-
-    const nameInput = screen.getByLabelText('分组名称');
-    await user.clear(nameInput);
-    await user.type(nameInput, '改名后');
-
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    await waitFor(() => {
-      expect(mockConfigure).toHaveBeenCalledWith(
-        1001,
-        expect.objectContaining({ name: '改名后' }),
-      );
-    });
+    const form = await configureRow('营销活动');
+    expect(form.getByLabelText('绑定域名')).toBeDisabled();
+    expect(form.getByText(/域名绑定已冻结/)).toBeInTheDocument();
+  });
+  it('shows a failed list as an error rather than a successful empty resource set', async () => {
+    vi.mocked(group.list).mockRejectedValue(new Error('permission denied'));
+    renderWithProviders(<GroupPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('permission denied');
   });
 });

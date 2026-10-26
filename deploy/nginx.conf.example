@@ -1,9 +1,8 @@
 # linklet-admin nginx 配置示例
 #
-# 两种部署模式，按注释切换：
-#   - Mock 模式：纯静态，无 /api 反代（in-app mock 生成数据）
-#   - 真实后端模式：反代 /api 到后端（admin API 无鉴权，靠 IP 白名单防护）
-#
+# 此配置仅托管默认 Mock 演示构建，无真实API。
+# 真实本机集成请使用 npm run dev:real（loopback BFF + SPA）。
+# 生产认证/会话尚未实现，不能用直接反代内部Admin API代替。
 # 用法：npm run build → 拷贝 dist/ 到 root 目录 → nginx -s reload
 
 server {
@@ -26,22 +25,12 @@ server {
     try_files $uri $uri/ /index.html;
   }
 
-  # === 真实后端模式：反代 /api 到后端（同源，无 CORS 问题）===
-  # Mock 模式下注释掉此段，前端走 in-app mock。
-  # admin API（/api/v1/admin/*）无鉴权中间件，靠上面的 IP 白名单防护。
-  # 业务 API（/api/v1/shorten/*）需租户 AK/SK 签名，管理控制台不持有 SK，故 ShortLink 页面保留 Mock。
-  location /api/ {
-    proxy_pass http://127.0.0.1:8080;   # linklet 后端
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
+  location /api/ { return 404; } # Mock构建无需真实接口
 
-  # 静态资源长缓存（hash 文件名，安全缓存）
+  # 静态资源缓存（Umi存在非hash文件名，需允许重新验证）
   location ~* \.(?:js|css|woff2?|png|jpe?g|svg)$ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
+    expires off;
+    add_header Cache-Control "no-cache";
     access_log off;
   }
 
@@ -77,17 +66,9 @@ server {
 #     return 302 /admin/;
 #   }
 #
-#   # /api 反代（路径不变，与根部署一致；后端不感知子路径）
-#   location /api/ {
-#     proxy_pass http://127.0.0.1:8080;
-#     proxy_set_header Host $host;
-#     proxy_set_header X-Real-IP $remote_addr;
-#     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-#   }
-#
 #   # 静态资源长缓存（hash 文件名，immutable）
 #   location ~* \.(?:js|css|woff2?|png|jpe?g|svg)$ {
-#     expires 1y;
-#     add_header Cache-Control "public, immutable";
+#     expires off;
+#     add_header Cache-Control "no-cache";
 #   }
 # }

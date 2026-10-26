@@ -6,7 +6,7 @@ import { expect } from 'e2e';
 describe('dashboard', () => {
   test('renders four resource statistics', async ({ app, screen }) => {
     await app.open('/dashboard');
-    await expect(screen.getByText('短链总数')).toBeVisible();
+    await expect(screen.getByText('短链记录数')).toBeVisible();
     await expect(screen.getByText('分组数')).toBeVisible();
     await expect(screen.getByText('域名数')).toBeVisible();
     await expect(screen.getByText('租户数')).toBeVisible();
@@ -24,15 +24,22 @@ describe('dashboard', () => {
         const n = card.querySelector('.ant-statistic-content-value-int');
         return n ? n.textContent : null;
       };
-      return await new Promise((resolve) => {
+      return await new Promise<{
+        shortLink: string | null;
+        group: string | null;
+        domain: string | null;
+        tenant: string | null;
+      }>((resolve, reject) => {
+        const deadline = Date.now() + 10_000;
         const tick = () => {
           const r = {
-            shortLink: pick('短链总数'),
+            shortLink: pick('短链记录数'),
             group: pick('分组数'),
             domain: pick('域名数'),
             tenant: pick('租户数'),
           };
           if (r.shortLink && r.group && r.domain && r.tenant) return resolve(r);
+          if (Date.now() >= deadline) return reject(new Error('Dashboard statistics did not finish loading'));
           setTimeout(tick, 120);
         };
         tick();
