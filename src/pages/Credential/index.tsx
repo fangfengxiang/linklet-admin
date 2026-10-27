@@ -1,12 +1,12 @@
 // 凭证管理 —— SK 仅创建时返回明文一次；停用不可逆；AK 不复用；轮换=新建
-import { ModalForm, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
-import { Alert, Button, InputNumber, message, Modal, Popconfirm, Typography } from 'antd';
+import { ModalForm, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
+import { Alert, Button, Select, message, Modal, Popconfirm, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { credential } from '@/services';
+import { credential, tenant } from '@/services';
 import { DomainError } from '@/services/typings';
 import { ActiveStatusTag } from '@/components/StatusTag';
-import type { TenantCredential } from '@/services/typings';
-import { useRef, useState } from 'react';
+import type { Tenant, TenantCredential } from '@/services/typings';
+import { useEffect, useRef, useState } from 'react';
 
 const { Paragraph, Text } = Typography;
 
@@ -14,6 +14,21 @@ export default function CredentialPage() {
   const tableRef = useRef<ActionType>();
   const refresh = () => tableRef.current?.reload();
   const [tenantFilter, setTenantFilter] = useState<number>();
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [tenantLoading, setTenantLoading] = useState(true);
+  const [tenantError, setTenantError] = useState<string>();
+  useEffect(() => {
+    let active = true;
+    tenant.list().then((list) => {
+      if (!active) return;
+      setTenants(list);
+      setTenantFilter((current) => current ?? list.find((item) => item.status === 1)?.id ?? list[0]?.id);
+    }).catch((error: unknown) => {
+      if (active) setTenantError(error instanceof Error ? error.message : '租户加载失败，请刷新页面');
+    }).finally(() => { if (active) setTenantLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const tenantOptions = tenants.map((item) => ({ label: `${item.name}（ID：${item.id}）`, value: item.id }));
   const [skModal, setSkModal] = useState<{ accessKey: string; secretKey?: string } | null>(null);
 
   const handleDisable = async (row: TenantCredential) => {
@@ -28,35 +43,42 @@ export default function CredentialPage() {
 
   return (
     <>
+      {tenantError && <Alert type="error" showIcon message={tenantError} style={{ marginBottom: 16 }} />}
+      {!tenantLoading && !tenantError && tenants.length === 0 && <Alert type="info" showIcon message="暂无租户，请先到租户管理创建租户，再为其签发凭证。" style={{ marginBottom: 16 }} />}
       <ProTable<TenantCredential>
         actionRef={tableRef}
         rowKey="id"
         headerTitle="凭证管理"
         search={false}
+        params={{ tenant_id: tenantFilter }}
         toolBarRender={() => [
-          // ProFormDigit 需 Form 上下文，toolBarRender 无之致 label 关联失效；
-          // 改用 InputNumber + aria-label，可访问且 getByLabel 可定位
-          <InputNumber
+          <Select<number>
             key="filter"
-            aria-label="租户ID"
+            aria-label="租户"
             value={tenantFilter}
-            onChange={(v) => setTenantFilter(v ?? undefined)}
-            min={1}
-            placeholder="租户ID"
+            onChange={setTenantFilter}
+            options={tenantOptions}
+            loading={tenantLoading}
+            showSearch
+            optionFilterProp="label"
+            placeholder="选择租户"
+            style={{ width: 240 }}
           />,
           <Button key="reload" onClick={refresh}>刷新</Button>,
           <ModalForm
-            key="create"
+            key={`create-${tenantFilter ?? 'none'}`}
             title="新建凭证"
-            trigger={<Button type="primary" icon={<PlusOutlined />} disabled={!tenantFilter}>新建凭证</Button>}
+            trigger={<Button type="primary" icon={<PlusOutlined />} loading={tenantLoading}>新建凭证</Button>}
             modalProps={{ destroyOnHidden: true }}
+            initialValues={{ tenant_id: tenantFilter }}
             onFinish={async (values) => {
-              if (!tenantFilter) return false;
+              const tenantId = Number(values.tenant_id);
               try {
-                const res = await credential.create({ ...values, tenant_id: tenantFilter });
+                const res = await credential.create({ ...values, tenant_id: tenantId });
                 // 明文 SK 仅此一次展示
                 setSkModal({ accessKey: res.access_key, secretKey: res.secret_key });
-                refresh();
+                if (tenantFilter === tenantId) refresh();
+                else setTenantFilter(tenantId);
                 return true;
               } catch (e) {
                 message.error((e as DomainError).message);
@@ -64,6 +86,7 @@ export default function CredentialPage() {
               }
             }}
           >
+            <ProFormSelect name="tenant_id" label="所属租户" options={tenantOptions} rules={[{ required: true, message: '请选择所属租户' }]} />
             <ProFormText name="description" label="说明" rules={[{ max: 255 }]} />
             <Alert
               type="warning"
@@ -104,8 +127,9 @@ export default function CredentialPage() {
       />
 
       {/* 明文 SK 一次性展示弹窗 —— 关闭后不入本地状态；作为 ProTable 兄弟节点确保受控 open 生效 */}
-      <Modal
-        open={!!skModal}
+      {skModal && <Modal
+        open
+        destroyOnHidden
         onOk={() => setSkModal(null)}
         onCancel={() => setSkModal(null)}
         okText="我已保存"
@@ -123,7 +147,7 @@ export default function CredentialPage() {
           <Text copyable type="danger">{skModal?.secretKey}</Text>
         </Paragraph>
         <Alert type="warning" showIcon message="Secret Key 仅显示一次，关闭后无法再次获取。" />
-      </Modal>
+      </Modal>}
     </>
   );
 }

@@ -1,112 +1,75 @@
-// Credential 页面测试 —— SK 仅创建时返回明文一次；停用不可逆；AK 不复用；轮换=新建
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import CredentialPage from '@/pages/Credential';
+import { credential, tenant } from '@/services';
 
 vi.mock('@/services', () => ({
-  credential: {
-    create: vi.fn(),
-    disable: vi.fn(),
-    list: vi.fn(),
-  },
+  credential: { create: vi.fn(), disable: vi.fn(), list: vi.fn() },
+  tenant: { list: vi.fn() },
 }));
-
-import { credential } from '@/services';
-const mockCreate = vi.mocked(credential.create);
-const mockDisable = vi.mocked(credential.disable);
-const mockList = vi.mocked(credential.list);
-
-const creds = [
-  { id: 1, tenant_id: 1, access_key: 'AKL0001MOCK', description: '主凭证', status: 1, created_at: '2026-09-01T00:00:00Z' },
-  { id: 2, tenant_id: 1, access_key: 'AKL0002MOCK', description: '旧凭证', status: 2, created_at: '2026-08-01T00:00:00Z', disabled_at: '2026-09-01T00:00:00Z' },
+const tenants = [
+  { id: 1, name: '运营主体A', group_ids: [], status: 1 as const },
+  { id: 2, name: '运营主体B', group_ids: [], status: 1 as const },
 ];
-
+const creds = [
+  { id: 1, tenant_id: 1, access_key: 'AKL0001MOCK', status: 1 as const },
+  { id: 2, tenant_id: 1, access_key: 'AKL0002MOCK', status: 2 as const },
+];
 beforeEach(() => {
-  mockCreate.mockReset();
-  mockDisable.mockReset();
-  mockList.mockReset();
+  vi.mocked(tenant.list).mockReset().mockResolvedValue(tenants);
+  vi.mocked(credential.list).mockReset().mockResolvedValue(creds);
+  vi.mocked(credential.create).mockReset().mockResolvedValue({ id: 3, access_key: 'AK_NEW', secret_key: 'SK_ONCE_ONLY' });
+  vi.mocked(credential.disable).mockReset().mockResolvedValue({ access_key: 'AKL0001MOCK', status: 'disabled' });
 });
 
-describe('Credential 凭证管理', () => {
-  it('未设置租户ID时新建按钮 disabled', async () => {
-    mockList.mockResolvedValue([]);
+describe('Credential tenant workflow', () => {
+  it('automatically loads the first tenant and credentials on entry', async () => {
     renderWithProviders(<CredentialPage />);
-
-    expect(screen.getByRole('button', { name: /新建凭证/ })).toBeDisabled();
+    expect(await screen.findByText('AKL0001MOCK')).toBeInTheDocument();
+    expect(screen.getByText('运营主体A（ID：1）')).toBeInTheDocument();
+    expect(credential.list).toHaveBeenCalledWith(1);
+    expect(screen.getByRole('button', { name: /新建凭证/ })).toBeEnabled();
   });
-
-  it('设置租户ID后加载凭证列表', async () => {
-    mockList.mockResolvedValue(creds);
-    const user = userEvent.setup();
+  it('refreshes credentials when the tenant selection changes', async () => {
+    vi.mocked(credential.list).mockImplementation(async (id) => id === 1 ? creds : [{ ...creds[0], id: 3, tenant_id: 2, access_key: 'AK_TENANT_2' }]);
     renderWithProviders(<CredentialPage />);
-
-    const tenantInput = screen.getByRole('spinbutton');
-    await user.type(tenantInput, '1');
-    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
-
-    await waitFor(() => {
-      expect(mockList).toHaveBeenCalledWith(1);
-      expect(screen.getByText('AKL0001MOCK')).toBeInTheDocument();
-    });
+    await screen.findByText('AKL0001MOCK');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '租户' }));
+    await userEvent.click(await screen.findByText('运营主体B（ID：2）'));
+    expect(await screen.findByText('AK_TENANT_2')).toBeInTheDocument();
+    expect(credential.list).toHaveBeenLastCalledWith(2);
   });
-
-  it('停用态凭证操作列显示"已停用"', async () => {
-    mockList.mockResolvedValue(creds);
-    const user = userEvent.setup();
+  it('lets users open creation immediately and choose a tenant explicitly', async () => {
     renderWithProviders(<CredentialPage />);
-
-    const tenantInput = screen.getByRole('spinbutton');
-    await user.type(tenantInput, '1');
-    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
-
-    await waitFor(() => expect(screen.getByText('AKL0002MOCK')).toBeInTheDocument());
-    expect(screen.getByText('已停用')).toBeInTheDocument();
+    await screen.findByText('AKL0001MOCK');
+    await userEvent.click(screen.getByRole('button', { name: /新建凭证/ }));
+    const form = within(await screen.findByRole('dialog', { name: '新建凭证' }));
+    expect(form.getByLabelText('所属租户')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: /确\s?定/ }));
+    await waitFor(() => expect(credential.create).toHaveBeenCalledWith(expect.objectContaining({ tenant_id: 1 })));
+    expect(await screen.findByText('SK_ONCE_ONLY')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '我已保存' }));
+    await waitFor(() => expect(screen.queryByText('SK_ONCE_ONLY')).not.toBeInTheDocument());
   });
-
-  it('新建凭证：提交后弹出 SK 一次性展示弹窗', async () => {
-    mockList.mockResolvedValue([]);
-    mockCreate.mockResolvedValue({ id: 3, access_key: 'AK_NEW', secret_key: 'SK_SECRET123' });
-    const user = userEvent.setup();
+  it('explains missing tenants and does not issue a credential without one', async () => {
+    vi.mocked(tenant.list).mockResolvedValue([]);
     renderWithProviders(<CredentialPage />);
-
-    // 输入租户ID → 新建按钮启用
-    const tenantInput = screen.getByRole('spinbutton');
-    await user.type(tenantInput, '1');
-    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /新建凭证/ })).not.toBeDisabled();
-    });
-
-    await user.click(screen.getByRole('button', { name: /新建凭证/ }));
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    // SK 弹窗展示 AccessKey 和 SecretKey
-    await waitFor(() => {
-      expect(screen.getByText('凭证创建成功')).toBeInTheDocument();
-      expect(screen.getByText('AK_NEW')).toBeInTheDocument();
-      expect(screen.getByText('SK_SECRET123')).toBeInTheDocument();
-    });
+    expect(await screen.findByText(/暂无租户/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /新建凭证/ }));
+    await userEvent.click(within(await screen.findByRole('dialog', { name: '新建凭证' })).getByRole('button', { name: /确\s?定/ }));
+    expect(await screen.findByText('请选择所属租户')).toBeInTheDocument();
+    expect(credential.create).not.toHaveBeenCalled();
   });
-
-  it('停用凭证：Popconfirm 确认后调用 disable', async () => {
-    mockList.mockResolvedValue(creds);
-    mockDisable.mockResolvedValue({ access_key: 'AKL0001MOCK', status: 'disabled' });
-    const user = userEvent.setup();
+  it('keeps disabled credentials irreversible and confirms disabling active ones', async () => {
     renderWithProviders(<CredentialPage />);
-
-    const tenantInput = screen.getByRole('spinbutton');
-    await user.type(tenantInput, '1');
-    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
-
-    await waitFor(() => expect(screen.getByText('AKL0001MOCK')).toBeInTheDocument());
-    await user.click(screen.getByText('停用', { selector: 'a' }));
-    await user.click(screen.getByRole('button', { name: /确\s?定/ }));
-
-    await waitFor(() => {
-      expect(mockDisable).toHaveBeenCalledWith('AKL0001MOCK');
-    });
+    const disabled = await screen.findByRole('row', { name: /AKL0002MOCK/ });
+    expect(within(disabled).getByText('已停用')).toBeInTheDocument();
+    expect(within(disabled).queryByText('启用', { selector: 'a' })).not.toBeInTheDocument();
+    const active = screen.getByRole('row', { name: /AKL0001MOCK/ });
+    await userEvent.click(within(active).getByText('停用', { selector: 'a' }));
+    await userEvent.click(screen.getByRole('button', { name: /确\s?定/ }));
+    await waitFor(() => expect(credential.disable).toHaveBeenCalledWith('AKL0001MOCK'));
   });
 });
