@@ -4,18 +4,17 @@ import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 
 describe('credential', { tags: ['credential'], serial: true }, () => {
-  test('filters credentials by tenant id and shows seed', async ({ app, screen }) => {
+  test('automatically shows seeded credentials and enables creation', async ({ app, screen }) => {
     await app.open('/credential');
-    // 无租户过滤 → 空列表；填租户ID=1 后刷新
-    await screen.getByLabel('租户ID').fill('1');
-    await screen.getByRole('button', /刷\s?新/).tap();
+    // Default tenant is selected automatically; no hidden numeric prerequisite.
     await expect(screen.getByText('AKL0001MOCK')).toBeVisible();
+    expect(await screen.getByRole('button', '新建凭证', { exact: false }).isEnabled()).toBe(true);
+    await app.screenshot('credential-default-data');
   });
 
   test('creates a credential and reveals SK once', async ({ app, screen }) => {
     await app.open('/credential');
-    await screen.getByLabel('租户ID').fill('1');
-    await screen.getByRole('button', /刷\s?新/).tap();
+    await expect(screen.getByText('AKL0001MOCK')).toBeVisible();
     await screen.getByRole('button', '新建凭证', { exact: false }).tap();
     await screen.getByRole('button', /确\s?定/).tap();
     // SK 一次性弹窗
@@ -28,8 +27,7 @@ describe('credential', { tags: ['credential'], serial: true }, () => {
 
   test('disables a credential (irreversible)', async ({ app, screen }) => {
     await app.open('/credential');
-    await screen.getByLabel('租户ID').fill('1');
-    await screen.getByRole('button', /刷\s?新/).tap();
+    await expect(screen.getByText('AKL0001MOCK')).toBeVisible();
     await expect(screen.getByText('AKL0001MOCK')).toBeVisible();
     const row = () => screen.getByRole('row').filter({ hasText: 'AKL0001MOCK' });
     await row().getByText('停用').tap();

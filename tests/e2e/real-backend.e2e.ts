@@ -43,9 +43,9 @@ describe('real backend: seven admin pages', {
 
   beforeEach(async ({ app }) => {
     // This engine requires a document before waitForResponse can attach.
-    // The unfiltered credential page makes no API request, so it cannot race
-    // with the actual page's list response registered by the test below.
-    await app.open('/credential');
+    // The 404 document makes no API request, so it cannot race with the
+    // actual page's list response registered by the test below.
+    await app.open('/404');
   });
 
   test('domain page creates, deploys, and offlines independently named resources', async ({ app, screen, browser }) => {
@@ -137,8 +137,8 @@ describe('real backend: seven admin pages', {
 
   test('credential page shows a newly generated SK once and persists irreversible disable', async ({ app, screen, browser }) => {
     await app.open('/credential');
-    await screen.getByLabel('租户ID').fill(String(createdTenantId));
-    const initial = await uiResponse<Credential[]>(browser, '/api/v1/admin/credential/list', () =>
+    await pickAntdSelect(browser, '.ant-pro-table-list-toolbar', `${tenantName}（ID：${createdTenantId}）`);
+    const initial = await uiResponse<Credential[]>(browser, `/api/v1/admin/credential/list?tenant_id=${createdTenantId}`, () =>
       screen.getByRole('button', /刷\s?新/).tap());
     expect(initial.data).toEqual([]);
     await screen.getByRole('button', '新建凭证', { exact: false }).tap();
