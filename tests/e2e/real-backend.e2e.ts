@@ -123,7 +123,7 @@ describe('real backend: seven admin pages', {
     const granted = await uiResponse<Tenant>(browser, '/api/v1/admin/tenant/grant', () =>
       screen.getByRole('button', /确\s?定/).tap());
     expect(granted.data.group_ids).toEqual([groupId]);
-    await expect(row.getByText(String(groupId))).toBeVisible();
+    await expect(row.getByText(groupName)).toBeVisible();
     for (const [label, status] of [['停用', 2], ['启用', 1]] as const) {
       await row.getByRole('cell').filter({ hasText: '授权' }).getByText(label).tap();
       const changed = await uiResponse<Tenant>(browser, '/api/v1/admin/tenant/status', () =>
