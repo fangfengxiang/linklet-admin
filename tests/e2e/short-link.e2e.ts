@@ -12,6 +12,36 @@ describe('short-link', { tags: ['short-link'], serial: true }, () => {
     await expect(screen.getByText('aB9xK2')).toBeVisible();
   });
 
+  test('keeps expiry and actions inside their columns at desktop and narrow widths', async ({ app, screen, browser }) => {
+    await app.open('/short-link');
+    await expect(screen.getByText('mK3pQ7')).toBeVisible();
+    for (const width of [1600, 1024, 768]) {
+      await browser.setViewport({ width, height: 900 });
+      const layout = await browser.evaluate(() => {
+        const row = Array.from(document.querySelectorAll('tbody tr')).find(element =>
+          Array.from(element.querySelectorAll('td')).some(cell => cell.textContent === 'mK3pQ7'));
+        const time = row?.querySelector('time');
+        const expiry = time?.closest('td');
+        const actions = row?.querySelector('td:last-child');
+        if (!time || !expiry || !actions) throw new Error('Expected expiring link and action cells');
+        const timeBox = time.getBoundingClientRect();
+        const cellBox = expiry.getBoundingClientRect();
+        const actionBox = actions.getBoundingClientRect();
+        return {
+          readableTime: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(time.textContent || ''),
+          expiryFits: timeBox.left >= cellBox.left && timeBox.right <= cellBox.right,
+          actionsFit: Array.from(actions.querySelectorAll('a')).every(link => {
+            const box = link.getBoundingClientRect();
+            return box.left >= actionBox.left && box.right <= actionBox.right;
+          }),
+          pageFits: document.documentElement.scrollWidth <= window.innerWidth + 1,
+        };
+      });
+      expect(layout).toEqual({ readableTime: true, expiryFits: true, actionsFit: true, pageFits: true });
+      await app.screenshot(`short-link-layout-${width}`);
+    }
+  });
+
   test('creates a short link', async ({ app, screen, browser }) => {
     await app.open('/short-link');
     await expect(screen.getByText('aB9xK2')).toBeVisible();

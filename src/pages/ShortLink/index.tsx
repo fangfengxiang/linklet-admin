@@ -82,8 +82,10 @@ export default function ShortLinkPage() {
         headerTitle="短链管理（最多100条）"
         pagination={false}
         search={false}
+        tableLayout="fixed"
+        scroll={{ x: 1100 }}
         toolBarRender={() => [
-          <Space key="create">
+          <Space key="create" wrap>
             <ModalForm<ShortLinkFormValues>
               title="创建短链"
               trigger={<Button type="primary" icon={<PlusOutlined />}>创建短链</Button>}
@@ -109,14 +111,18 @@ export default function ShortLinkPage() {
           }
         }}
         columns={[
-          { title: 'ID', dataIndex: 'id', width: 60 },
-          { title: 'Code', dataIndex: 'code' },
+          { title: 'ID', dataIndex: 'id', width: 80, ellipsis: true },
+          { title: 'Code', dataIndex: 'code', width: 112, ellipsis: true },
           { title: '目标URL', dataIndex: 'target_url', ellipsis: true },
-          { title: '分组', dataIndex: 'group_id' },
+          { title: '分组', dataIndex: 'group_id', width: 112 },
           { title: '状态', dataIndex: 'status', width: 90, render: (_, row) => <ActiveStatusTag status={row.status} /> },
-          { title: '过期', dataIndex: 'expires_at', width: 100,
-            render: (_, row) => row.expires_at ? <Tag>{row.expires_at}</Tag> : <Tag color="blue">永不过期</Tag> },
-          { title: '操作', width: 140, valueType: 'option', render: (_, row) => [
+          { title: '过期时间', dataIndex: 'expires_at', width: 200,
+            render: (_, row) => row.expires_at
+              ? <time dateTime={row.expires_at} title={row.expires_at} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                {dayjs(row.expires_at).format('YYYY-MM-DD HH:mm:ss')}
+              </time>
+              : <Tag color="blue">永不过期</Tag> },
+          { title: '操作', width: 128, fixed: 'right', valueType: 'option', render: (_, row) => [
             <a key="detail" onClick={() => { void openDetail(row.code); }}>详情</a>,
             row.status === 1 && <Popconfirm key="disable" title="停用短链？此操作不可逆，code永不复用。" onConfirm={() => handleDisable(row)}>
               <a style={{ color: '#ff4d4f' }}>停用</a>
