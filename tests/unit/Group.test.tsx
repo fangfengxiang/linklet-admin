@@ -48,6 +48,8 @@ describe('Group 分组管理', () => {
     await waitFor(() => {
       expect(screen.getByText('主站默认分组')).toBeInTheDocument();
       expect(screen.getByText('营销活动')).toBeInTheDocument();
+      expect(within(screen.getByRole('row', { name: /主站默认分组/ })).getByText('s.example.com')).toBeInTheDocument();
+      expect(within(screen.getByRole('row', { name: /营销活动/ })).getByText('go.example.com')).toBeInTheDocument();
     });
   });
 
