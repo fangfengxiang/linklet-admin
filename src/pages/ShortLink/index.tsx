@@ -1,3 +1,4 @@
+import { DateTime, DATE_TIME_FORMAT } from '@/components/DateTime';
 // Short-link operations use tenant-signed APIs through the server BFF.
 import { ModalForm, ProFormDateTimePicker, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Drawer, message, Popconfirm, Space, Tag, Typography } from 'antd';
@@ -118,9 +119,7 @@ export default function ShortLinkPage() {
           { title: '状态', dataIndex: 'status', width: 90, render: (_, row) => <ActiveStatusTag status={row.status} /> },
           { title: '过期时间', dataIndex: 'expires_at', width: 200,
             render: (_, row) => row.expires_at
-              ? <time dateTime={row.expires_at} title={row.expires_at} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                {dayjs(row.expires_at).format('YYYY-MM-DD HH:mm:ss')}
-              </time>
+              ? <DateTime value={row.expires_at} />
               : <Tag color="blue">永不过期</Tag> },
           { title: '操作', width: 128, fixed: 'right', valueType: 'option', render: (_, row) => [
             <a key="detail" onClick={() => { void openDetail(row.code); }}>详情</a>,
@@ -141,9 +140,9 @@ export default function ShortLinkPage() {
           <Field label="目标URL"><Typography.Paragraph copyable style={{ marginBottom: 0 }}>{detail.target_url}</Typography.Paragraph></Field>
           <Field label="分组ID">{detail.group_id}</Field>
           <Field label="状态"><ActiveStatusTag status={detail.status} /></Field>
-          <Field label="创建时间">{detail.created_at}</Field>
-          <Field label="过期时间">{detail.expires_at ?? '永不过期'}</Field>
-          <Field label="停用时间">{detail.disabled_at ?? '—'}</Field>
+          <Field label="创建时间"><DateTime value={detail.created_at} /></Field>
+          <Field label="过期时间"><DateTime value={detail.expires_at} empty="永不过期" /></Field>
+          <Field label="停用时间"><DateTime value={detail.disabled_at} /></Field>
         </Space>}
       </Drawer>
     </>
@@ -161,7 +160,7 @@ function ShortLinkForm() {
     <ProFormSelect name="group_id" label="分组" rules={[{ required: true }]}
       request={async () => (await group.list()).filter((item) => item.status === 1)
         .map((item) => ({ label: `${item.group_id} ${item.name}`, value: item.group_id }))} />
-    <ProFormDateTimePicker name="expires_at" label="过期时间（可选）" />
+    <ProFormDateTimePicker name="expires_at" label="过期时间（可选）" fieldProps={{ format: DATE_TIME_FORMAT }} />
     <Alert type="info" showIcon message="留空表示永不过期。目标URL创建后不可修改；创建仍需当前业务凭证的分组授权。" style={{ marginBottom: 16 }} />
   </>;
 }
