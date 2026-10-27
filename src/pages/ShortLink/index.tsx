@@ -4,6 +4,7 @@
 import { ModalForm, ProForm, ProFormDateTimePicker, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Drawer, message, Popconfirm, Space, Tag, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { group, shortLink } from '@/services';
 import { DomainError } from '@/services/typings';
 import { ActiveStatusTag } from '@/components/StatusTag';
@@ -32,8 +33,10 @@ export default function ShortLinkPage() {
         rowKey="id"
         headerTitle="短链管理"
         search={false}
+        tableLayout="fixed"
+        scroll={{ x: 1100 }}
         toolBarRender={() => [
-          <Space key="create">
+          <Space key="create" wrap>
             <ModalForm
               title="创建短链"
               trigger={<Button type="primary" icon={<PlusOutlined />}>创建短链</Button>}
@@ -90,17 +93,21 @@ export default function ShortLinkPage() {
           }
         }}
         columns={[
-          { title: 'ID', dataIndex: 'id', width: 60 },
-          { title: 'Code', dataIndex: 'code' },
+          { title: 'ID', dataIndex: 'id', width: 80, ellipsis: true },
+          { title: 'Code', dataIndex: 'code', width: 112, ellipsis: true },
           { title: '目标URL', dataIndex: 'dest_url', ellipsis: true },
-          { title: '分组', dataIndex: 'group_id' },
+          { title: '分组', dataIndex: 'group_id', width: 112 },
           { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
           {
-            title: '过期', dataIndex: 'expires_at', width: 100,
-            render: (_, r) => r.expires_at ? <Tag>{r.expires_at}</Tag> : <Tag color="blue">永不过期</Tag>,
+            title: '过期时间', dataIndex: 'expires_at', width: 200,
+            render: (_, r) => r.expires_at
+              ? <time dateTime={r.expires_at} title={r.expires_at} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                {dayjs(r.expires_at).format('YYYY-MM-DD HH:mm:ss')}
+              </time>
+              : <Tag color="blue">永不过期</Tag>,
           },
           {
-            title: '操作', width: 140, valueType: 'option',
+            title: '操作', width: 128, fixed: 'right', valueType: 'option',
             render: (_, row) => [
               <a key="detail" onClick={() => setDetail(row)}>详情</a>,
               row.status === 1 && (
