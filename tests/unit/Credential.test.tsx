@@ -44,6 +44,7 @@ describe('Credential 凭证管理', () => {
 
     const tenantInput = screen.getByRole('spinbutton');
     await user.type(tenantInput, '1');
+    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
 
     await waitFor(() => {
       expect(mockList).toHaveBeenCalledWith(1);
@@ -58,6 +59,7 @@ describe('Credential 凭证管理', () => {
 
     const tenantInput = screen.getByRole('spinbutton');
     await user.type(tenantInput, '1');
+    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
 
     await waitFor(() => expect(screen.getByText('AKL0002MOCK')).toBeInTheDocument());
     expect(screen.getByText('已停用')).toBeInTheDocument();
@@ -72,6 +74,7 @@ describe('Credential 凭证管理', () => {
     // 输入租户ID → 新建按钮启用
     const tenantInput = screen.getByRole('spinbutton');
     await user.type(tenantInput, '1');
+    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /新建凭证/ })).not.toBeDisabled();
@@ -96,9 +99,10 @@ describe('Credential 凭证管理', () => {
 
     const tenantInput = screen.getByRole('spinbutton');
     await user.type(tenantInput, '1');
+    await user.click(screen.getByRole('button', { name: /刷\s?新/ }));
 
     await waitFor(() => expect(screen.getByText('AKL0001MOCK')).toBeInTheDocument());
-    await user.click(screen.getByText('停用'));
+    await user.click(screen.getByText('停用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {

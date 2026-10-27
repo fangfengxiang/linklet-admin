@@ -1,6 +1,6 @@
 // ShortLink 页面测试 —— target_url 不可改；code 不复用；停用不可逆；expires_at null=不过期
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import ShortLinkPage from '@/pages/ShortLink';
@@ -59,7 +59,7 @@ describe('ShortLink 短链管理', () => {
 
     await waitFor(() => expect(screen.getByText('oPp2xR')).toBeInTheDocument());
     // 已停用的短链操作列只有"详情"，无"停用"
-    expect(screen.queryByText('停用')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('row', { name: /oPp2xR/ })).queryByText('停用', { selector: 'a' })).not.toBeInTheDocument();
   });
 
   it('点击详情后打开抽屉显示 dest_url（target_url 只读）', async () => {
@@ -69,11 +69,11 @@ describe('ShortLink 短链管理', () => {
     renderWithProviders(<ShortLinkPage />);
 
     await waitFor(() => expect(screen.getByText('aB9xK2')).toBeInTheDocument());
-    await user.click(screen.getByText('详情'));
+    await user.click(within(screen.getByRole('row', { name: /aB9xK2/ })).getByText('详情'));
 
     await waitFor(() => {
       expect(screen.getByText('短链详情')).toBeInTheDocument();
-      expect(screen.getByText('https://example.com/page1')).toBeInTheDocument();
+      expect(within(screen.getByRole('dialog', { name: '短链详情' })).getByText('https://example.com/page1')).toBeInTheDocument();
     });
   });
 
@@ -85,7 +85,7 @@ describe('ShortLink 短链管理', () => {
     renderWithProviders(<ShortLinkPage />);
 
     await waitFor(() => expect(screen.getByText('aB9xK2')).toBeInTheDocument());
-    await user.click(screen.getByText('停用'));
+    await user.click(within(screen.getByRole('row', { name: /aB9xK2/ })).getByText('停用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {
@@ -105,8 +105,8 @@ describe('ShortLink 短链管理', () => {
     await user.type(screen.getByPlaceholderText('https://example.com/page'), 'https://test.com');
 
     // 选择分组
-    await user.click(screen.getByText('请选择'));
-    await user.click(screen.getByText('1001 主站默认分组'));
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    await user.click(await screen.findByText('1001 主站默认分组'));
 
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 

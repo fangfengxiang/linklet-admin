@@ -1,6 +1,6 @@
 // Group 页面测试 —— group_id 不可改；可改绑域名；停用不影响已有短链
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import GroupPage from '@/pages/Group';
@@ -64,8 +64,8 @@ describe('Group 分组管理', () => {
     await user.type(screen.getByLabelText('分组名称'), '新组');
 
     // 选择域名（仅已投产域名：s.example.com / go.example.com）
-    await user.click(screen.getByText('请选择'));
-    await user.click(screen.getByText('s.example.com'));
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    await user.click(await screen.findByText('s.example.com'));
 
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
@@ -87,7 +87,7 @@ describe('Group 分组管理', () => {
     renderWithProviders(<GroupPage />);
 
     await waitFor(() => expect(screen.getByText('主站默认分组')).toBeInTheDocument());
-    await user.click(screen.getByText('配置'));
+    await user.click(within(screen.getByRole('row', { name: /主站默认分组/ })).getByText('配置'));
 
     const gidInput = screen.getByLabelText('分组编号');
     expect(gidInput).toBeDisabled();
@@ -101,7 +101,7 @@ describe('Group 分组管理', () => {
     renderWithProviders(<GroupPage />);
 
     await waitFor(() => expect(screen.getByText('主站默认分组')).toBeInTheDocument());
-    await user.click(screen.getByText('配置'));
+    await user.click(within(screen.getByRole('row', { name: /主站默认分组/ })).getByText('配置'));
 
     const nameInput = screen.getByLabelText('分组名称');
     await user.clear(nameInput);

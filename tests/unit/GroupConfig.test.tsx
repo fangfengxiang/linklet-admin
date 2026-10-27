@@ -1,6 +1,6 @@
 // GroupConfig 页面测试 —— (group_id, config_key) 唯一；key max128 value max65536
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import GroupConfigPage from '@/pages/GroupConfig';
@@ -31,7 +31,7 @@ describe('GroupConfig 分组配置', () => {
 
     await user.click(screen.getByRole('button', { name: /设置配置/ }));
 
-    await user.type(screen.getByLabelText('分组编号'), '1001');
+    await user.type(within(await screen.findByRole('dialog', { name: '设置配置项' })).getByLabelText('分组编号'), '1001');
     await user.type(screen.getByLabelText('配置键'), 'max_retries');
     await user.type(screen.getByLabelText('配置值'), '3');
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
@@ -53,7 +53,7 @@ describe('GroupConfig 分组配置', () => {
     renderWithProviders(<GroupConfigPage />);
 
     await user.click(screen.getByRole('button', { name: /设置配置/ }));
-    await user.type(screen.getByLabelText('分组编号'), '1001');
+    await user.type(within(await screen.findByRole('dialog', { name: '设置配置项' })).getByLabelText('分组编号'), '1001');
     // 不填 config_key 和 config_value
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
@@ -69,7 +69,7 @@ describe('GroupConfig 分组配置', () => {
     renderWithProviders(<GroupConfigPage />);
 
     await user.click(screen.getByRole('button', { name: /设置配置/ }));
-    await user.type(screen.getByLabelText('分组编号'), '1001');
+    await user.type(within(await screen.findByRole('dialog', { name: '设置配置项' })).getByLabelText('分组编号'), '1001');
     await user.type(screen.getByLabelText('配置键'), 'k2');
     await user.type(screen.getByLabelText('配置值'), 'v2');
     // 不填"说明"

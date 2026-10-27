@@ -1,6 +1,6 @@
 // Tenant 页面测试 —— group_ids 授权集合（非所有权，去重）；停用阻止管理不影响解析
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import TenantPage from '@/pages/Tenant';
@@ -90,7 +90,7 @@ describe('Tenant 租户管理', () => {
     renderWithProviders(<TenantPage />);
 
     await waitFor(() => expect(screen.getByText('运营主体A')).toBeInTheDocument());
-    await user.click(screen.getByText('停用'));
+    await user.click(within(screen.getByRole('row', { name: /运营主体A/ })).getByText('停用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {
@@ -106,7 +106,7 @@ describe('Tenant 租户管理', () => {
     renderWithProviders(<TenantPage />);
 
     await waitFor(() => expect(screen.getByText('运营主体B')).toBeInTheDocument());
-    await user.click(screen.getByText('启用'));
+    await user.click(within(screen.getByRole('row', { name: /运营主体B/ })).getByText('启用', { selector: 'a' }));
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 
     await waitFor(() => {
@@ -129,9 +129,12 @@ describe('Tenant 租户管理', () => {
     await user.click(grantLinks[0]);
 
     // 清空已有选择后重新选
-    await user.click(screen.getByText('请选择'));
-    await user.click(screen.getByText('1001 主站默认分组'));
-    await user.click(screen.getByText('1002 营销活动'));
+    const select = screen.getByRole('combobox');
+    fireEvent.keyDown(select, { key: 'Backspace', code: 'Backspace' });
+    fireEvent.keyDown(select, { key: 'Backspace', code: 'Backspace' });
+    fireEvent.mouseDown(select);
+    await user.click(await screen.findByText('1001 主站默认分组'));
+    await user.click(await screen.findByText('1002 营销活动'));
 
     await user.click(screen.getByRole('button', { name: /确\s?定/ }));
 

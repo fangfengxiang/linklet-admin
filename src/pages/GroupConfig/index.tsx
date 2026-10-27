@@ -38,7 +38,7 @@ export default function GroupConfigPage() {
           modalProps={{ destroyOnHidden: true }}
           onFinish={async (values) => {
             try {
-              await groupConfig.set(values as SetGroupConfigBody);
+              await groupConfig.set({ ...values, group_id: Number(values.group_id) } as SetGroupConfigBody);
               message.success('已保存');
               refresh();
               return true;
