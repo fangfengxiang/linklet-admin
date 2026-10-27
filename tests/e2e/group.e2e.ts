@@ -12,6 +12,9 @@ describe('group', { tags: ['group'], serial: true }, () => {
     await app.open('/group');
     await expect(screen.getByText('主站默认分组')).toBeVisible();
     await expect(screen.getByText('营销活动')).toBeVisible();
+    await expect(screen.getByRole('columnheader', '绑定域名')).toBeVisible();
+    await expect(screen.getByRole('row').filter({ hasText: '主站默认分组' }).getByText('s.example.com')).toBeVisible();
+    await expect(screen.getByRole('row').filter({ hasText: '营销活动' }).getByText('go.example.com')).toBeVisible();
   });
 
   test('creates a new group with a deployed domain', async ({ app, screen, browser }) => {

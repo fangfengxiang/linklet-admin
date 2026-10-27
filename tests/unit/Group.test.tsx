@@ -35,6 +35,7 @@ describe('Group 后端配置边界', () => {
   it('loads platform groups and makes the bounded list explicit', async () => {
     renderWithProviders(<GroupPage />);
     expect(await screen.findByText('主站默认分组')).toBeInTheDocument();
+    expect(within(screen.getByRole('row', { name: /主站默认分组/ })).getByText('s.example.com')).toBeInTheDocument();
     expect(screen.getByText('分组管理（最多100条）')).toBeInTheDocument();
     expect(group.list).toHaveBeenCalledWith();
   });
@@ -46,7 +47,9 @@ describe('Group 后端配置边界', () => {
     await userEvent.type(form.getByLabelText('分组编号'), '1003');
     await userEvent.type(form.getByLabelText('分组名称'), '新组');
     fireEvent.mouseDown(form.getByRole('combobox'));
-    await userEvent.click(await screen.findByText('s.example.com'));
+    const options = (await screen.findAllByText('s.example.com')).filter((element) => !element.closest('table'));
+    expect(options).toHaveLength(1);
+    await userEvent.click(options[0]);
     await userEvent.click(form.getByRole('button', { name: /确\s*定/ }));
     await waitFor(() => expect(group.create).toHaveBeenCalledWith(
       expect.objectContaining({ group_id: 1003, name: '新组', domain_entry_id: 1 })));

@@ -8,6 +8,8 @@ import { ActiveStatusTag } from '@/components/StatusTag';
 import type { ConfigureGroupBody, CreateGroupBody, DomainEntry, Group } from '@/services/typings';
 import { useRef, useState } from 'react';
 
+type GroupRow = Group & { domain?: string };
+
 export default function GroupPage() {
   const tableRef = useRef<ActionType>();
   const [listError, setListError] = useState<string>();
@@ -17,7 +19,7 @@ export default function GroupPage() {
   return (
     <>
       {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
-      <ProTable<Group>
+      <ProTable<GroupRow>
         actionRef={tableRef}
         rowKey="id"
         headerTitle="分组管理（最多100条）"
@@ -49,7 +51,9 @@ export default function GroupPage() {
         request={async () => {
           setListError(undefined);
           try {
-            const data = await group.list();
+            const [groups, domains] = await Promise.all([group.list(), domainEntry.list()]);
+            const domainsById = new Map(domains.map((domain) => [domain.id, domain.domain]));
+            const data = groups.map((item) => ({ ...item, domain: domainsById.get(item.domain_entry_id) }));
             return { data, success: true };
           } catch (e) {
             message.error((e as DomainError).message);
@@ -61,7 +65,7 @@ export default function GroupPage() {
           { title: 'ID', dataIndex: 'id', width: 60 },
           { title: '分组编号', dataIndex: 'group_id' },
           { title: '名称', dataIndex: 'name' },
-          { title: '域名ID', dataIndex: 'domain_entry_id' },
+          { title: '绑定域名', dataIndex: 'domain', ellipsis: true, render: (_, row) => row.domain || '域名不可用' },
           { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
           {
             title: '操作', width: 100, valueType: 'option',
