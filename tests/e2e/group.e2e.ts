@@ -1,10 +1,11 @@
-// Group 页 E2E —— group_id 不可改；可改绑域名（仅已投产）；停用不影响解析
-// 覆盖：列表加载（种子分组）→ 新建分组（含域名 Select）→ 配置（改名称/状态）
+// Group 页 E2E —— group_id 不可改；有历史短链后冻结域名；停用不影响解析
+// 覆盖：列表加载、新建分组、只读编号/名称与状态配置
+import { randomInt } from 'node:crypto';
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import { pickAntdSelect } from './helpers';
 
-const RUN = process.env.CI ? 'ci' : String(Date.now());
+const GROUP_ID = randomInt(1_000_000, 4_000_000_000);
 
 describe('group', { tags: ['group'], serial: true }, () => {
   test('loads the list with seeded groups', async ({ app, screen }) => {
@@ -14,7 +15,7 @@ describe('group', { tags: ['group'], serial: true }, () => {
   });
 
   test('creates a new group with a deployed domain', async ({ app, screen, browser }) => {
-    const gid = Number(`2${RUN.slice(-6)}`); // 数值型 group_id，避免与种子 1001/1002 冲突
+    const gid = GROUP_ID; // Valid uint32 in both local and CI, independent of CI labels.
     await app.open('/group');
     await expect(screen.getByText('主站默认分组')).toBeVisible(); // 等表格稳定再操作
     await screen.getByRole('button', '新建分组', { exact: false }).tap();
