@@ -1,3 +1,4 @@
+import { DateTime } from '@/components/DateTime';
 // 域名资源管理 —— 状态 new(1)→deployed(2)→offline(3) 不可逆；有 Group 绑定不可下线
 import { ModalForm, ProFormTextArea, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Button, message, Popconfirm, Space } from 'antd';
@@ -78,7 +79,7 @@ export default function DomainEntryPage() {
         { title: '标签', dataIndex: 'tag' },
         { title: '说明', dataIndex: 'description', ellipsis: true },
         { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <DomainStatusTag status={r.status} /> },
-        { title: '投产时间', dataIndex: 'enabled_at' },
+        { title: '投产时间', dataIndex: 'enabled_at', width: 200, render: (_, row) => <DateTime value={row.enabled_at} /> },
         {
           title: '操作', width: 160, valueType: 'option',
           render: (_, row) => {

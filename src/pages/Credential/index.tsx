@@ -1,3 +1,4 @@
+import { DateTime } from '@/components/DateTime';
 // 凭证管理 —— SK 仅创建时返回明文一次；停用不可逆；AK 不复用；轮换=新建
 import { ModalForm, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Select, message, Modal, Popconfirm, Typography } from 'antd';
@@ -111,7 +112,7 @@ export default function CredentialPage() {
           { title: 'AccessKey', dataIndex: 'access_key' },
           { title: '说明', dataIndex: 'description', ellipsis: true },
           { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
-          { title: '停用时间', dataIndex: 'disabled_at' },
+          { title: '停用时间', dataIndex: 'disabled_at', width: 200, render: (_, row) => <DateTime value={row.disabled_at} /> },
           {
             title: '操作', width: 100, valueType: 'option',
             render: (_, row) =>

@@ -1,10 +1,10 @@
+import { DateTime, DATE_TIME_FORMAT } from '@/components/DateTime';
 // 短链管理 —— target_url/dest_url 不可改；code 不复用；停用不可逆；expires_at null=不过期
 // 注意：短链 CRUD 走业务 API（/api/v1/shorten/*），需租户 AK/SK 签名；
 // dev 由 BFF 代签，生产 SPA 需 BFF/nginx(OpenResty) 代签。后端无 admin list 端点。
 import { ModalForm, ProForm, ProFormDateTimePicker, ProFormSelect, ProFormText, ProTable, type ActionType } from '@ant-design/pro-components';
 import { Alert, Button, Drawer, message, Popconfirm, Space, Tag, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import { group, shortLink } from '@/services';
 import { DomainError } from '@/services/typings';
 import { ActiveStatusTag } from '@/components/StatusTag';
@@ -101,9 +101,7 @@ export default function ShortLinkPage() {
           {
             title: '过期时间', dataIndex: 'expires_at', width: 200,
             render: (_, r) => r.expires_at
-              ? <time dateTime={r.expires_at} title={r.expires_at} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                {dayjs(r.expires_at).format('YYYY-MM-DD HH:mm:ss')}
-              </time>
+              ? <DateTime value={r.expires_at} />
               : <Tag color="blue">永不过期</Tag>,
           },
           {
@@ -137,9 +135,9 @@ export default function ShortLinkPage() {
             </Field>
             <Field label="分组ID">{detail.group_id}</Field>
             <Field label="状态"><ActiveStatusTag status={detail.status} /></Field>
-            <Field label="创建时间">{detail.created_at}</Field>
-            <Field label="过期时间">{detail.expires_at ?? '永不过期'}</Field>
-            <Field label="停用时间">{detail.disabled_at ?? '—'}</Field>
+            <Field label="创建时间"><DateTime value={detail.created_at} /></Field>
+            <Field label="过期时间"><DateTime value={detail.expires_at} empty="永不过期" /></Field>
+            <Field label="停用时间"><DateTime value={detail.disabled_at} /></Field>
           </Space>
         )}
       </Drawer>
@@ -175,7 +173,7 @@ function ShortLinkForm() {
         rules={[{ required: true }]}
       />
       <ProForm.Group>
-        <ProFormDateTimePicker name="expires_at" label="过期时间（可选）" />
+        <ProFormDateTimePicker name="expires_at" label="过期时间（可选）" fieldProps={{ format: DATE_TIME_FORMAT }} />
       </ProForm.Group>
       <Alert
         type="info"
