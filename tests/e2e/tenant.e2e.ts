@@ -34,8 +34,8 @@ describe('tenant', { tags: ['tenant'], serial: true }, () => {
     await closeAntdSelect(browser);
     await screen.getByRole('button', /确\s?定/).tap();
     await expect(screen.getByText('授权已更新')).toBeVisible();
-    // 授权后 B 的授权分组列出现 1002
-    await expect(screen.getByRole('row').filter({ hasText: '运营主体B' }).getByText('1002')).toBeVisible();
+    // 授权后 B 的授权分组列出现具体名称
+    await expect(screen.getByRole('row').filter({ hasText: '运营主体B' }).getByText('营销活动')).toBeVisible();
   });
 
   test('disables then re-enables a tenant (reversible)', async ({ app, screen }) => {

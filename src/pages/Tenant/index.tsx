@@ -8,6 +8,8 @@ import { ActiveStatusTag } from '@/components/StatusTag';
 import type { Tenant } from '@/services/typings';
 import { useRef, useState } from 'react';
 
+type TenantRow = Tenant & { group_names: Record<number, string> };
+
 export default function TenantPage() {
   const tableRef = useRef<ActionType>();
   const [listError, setListError] = useState<string>();
@@ -27,7 +29,7 @@ export default function TenantPage() {
   return (
     <>
       {listError && <Alert type="error" showIcon message={listError} style={{ marginBottom: 16 }} />}
-      <ProTable<Tenant>
+      <ProTable<TenantRow>
         actionRef={tableRef}
         rowKey="id"
         headerTitle="租户管理（最多100条）"
@@ -57,7 +59,9 @@ export default function TenantPage() {
         request={async () => {
           setListError(undefined);
           try {
-            const data = await tenant.list();
+            const [tenants, groups] = await Promise.all([tenant.list(), group.list()]);
+            const groupNames = Object.fromEntries(groups.map((item) => [item.group_id, item.name]));
+            const data = tenants.map((item) => ({ ...item, group_names: groupNames }));
             return { data, success: true };
           } catch (e) {
             message.error((e as DomainError).message);
@@ -71,7 +75,7 @@ export default function TenantPage() {
           {
             title: '授权分组', dataIndex: 'group_ids',
             render: (_, r) => r.group_ids?.length
-              ? <Space wrap>{r.group_ids.map((id) => <Tag key={id}>{id}</Tag>)}</Space>
+              ? <Space wrap>{r.group_ids.map((id) => <Tag key={id} title={`分组编号：${id}`}>{r.group_names[id] || '分组不可用'}</Tag>)}</Space>
               : <span style={{ color: '#999' }}>无</span>,
           },
           { title: '状态', dataIndex: 'status', width: 90, render: (_, r) => <ActiveStatusTag status={r.status} /> },
