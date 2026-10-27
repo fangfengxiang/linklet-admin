@@ -22,6 +22,7 @@ const BASE_PATH = (() => {
 })();
 
 export default defineConfig({
+  hash: true,
   publicPath: BASE_PATH,
   base: BASE_PATH,
   define: {
